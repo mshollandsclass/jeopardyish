@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeopardy Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    // Supabase Config
+    const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
+  </script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    .game-font {
+      font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif;
+      letter-spacing: 2px;
+    }
+    
+    .category-font {
+      font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .money-font {
+      font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif;
+      color: #D4AF37;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    .card {
+      background: linear-gradient(145deg, #1e3a8a, #1e40af);
+      border: 3px solid #1e3a8a;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .card:hover:not(.used) {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+      border-color: #D4AF37;
+    }
+    
+    .card.used {
+      background: linear-gradient(145deg, #0f172a, #1e293b);
+      opacity: 0.4;
+      cursor: default;
+    }
+    
+    .question-modal {
+      background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+      border: 4px solid #D4AF37;
+      box-shadow: 0 0 60px rgba(212, 175, 55, 0.3);
+    }
+    
+    @keyframes slideIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+      50% { text-shadow: 0 0 30px rgba(212, 175, 55, 0.8); }
+    }
+    
+    .animate-modal {
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .score-display {
+      animation: pulse 2s infinite;
+    }
+    
+    .btn-answer {
+      background: linear-gradient(145deg, #15803d, #166534);
+      border: 2px solid #22c55e;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-answer:hover {
+      background: linear-gradient(145deg, #16a34a, #15803d);
+      transform: translateY(-2px);
+    }
+    
+    .btn-wrong {
+      background: linear-gradient(145deg, #b91c1c, #991b1b);
+      border: 2px solid #ef4444;
+    }
+    
+    .btn-wrong:hover {
+      background: linear-gradient(145deg, #dc2626, #b91c1c);
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-900 overflow-auto">
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="h-full flex items-center justify-center">
+    <div class="text-center">
+      <h1 class="game-font text-4xl text-yellow-400 mb-4">Loading Game...</h1>
+      <p id="loading-message" class="text-blue-300">Fetching your questions</p>
+    </div>
+  </div>
+
+  <!-- Error Screen -->
+  <div id="error-screen" class="hidden h-full flex items-center justify-center">
+    <div class="text-center max-w-md p-8">
+      <h1 class="game-font text-4xl text-red-400 mb-4">Error</h1>
+      <p id="error-message" class="text-white mb-6">No questions found.</p>
+      <a href="index.html" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-6 rounded-lg">Back to Dashboard</a>
+    </div>
+  </div>
+
+  <div id="app" class="hidden h-full w-full flex flex-col">
+    <!-- Header -->
+    <header class="py-4 px-6 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b-4 border-yellow-500">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4 max-w-7xl mx-auto">
+        <h1 id="game-title" class="game-font text-4xl md:text-5xl text-yellow-400 tracking-wider">JEOPARDY!</h1>
+        <div class="flex items-center gap-3">
+          <button id="round1-btn" class="bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105">Round 1</button>
+          <button id="round2-btn" class="bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600">Round 2</button>
+          <button id="final-btn" class="bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600">Final Round</button>
+        </div>
+        <div class="flex flex-col md:flex-row items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-yellow-400 text-lg font-bold">Team 1:</span>
+            <span id="score-team1" class="money-font text-2xl md:text-3xl score-display">$0</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-yellow-400 text-lg font-bold">Team 2:</span>
+            <span id="score-team2" class="money-font text-2xl md:text-3xl score-display">$0</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Game Board -->
+    <main class="flex-1 p-4 md:p-6 overflow-auto">
+      <div class="max-w-7xl mx-auto h-full">
+        <div id="game-board" class="grid grid-cols-6 gap-2 md:gap-3 h-full min-h-96"></div>
+      </div>
+    </main>
+
+    <!-- Question Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+      <div class="question-modal animate-modal rounded-lg p-6 md:p-10 max-w-3xl w-full text-center">
+        <div id="modal-value" class="money-font text-4xl md:text-5xl mb-6"></div>
+        <p id="modal-question" class="text-white text-3xl md:text-5xl mb-8 leading-relaxed category-font"></p>
+        <div id="answer-section" class="mb-6">
+          <button id="reveal-btn" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-lg text-xl transition-all transform hover:scale-105">Reveal Answer</button>
+        </div>
+        <div id="result-section" class="hidden">
+          <p id="modal-answer" class="text-yellow-400 text-2xl md:text-4xl mb-6 font-bold"></p>
+          <p class="text-white text-xl mb-4">Which team answered?</p>
+          <div class="flex gap-4 justify-center flex-wrap mb-6">
+            <button id="team1-correct-btn" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">✓ Team 1 Correct</button>
+            <button id="team2-correct-btn" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">✓ Team 2 Correct</button>
+          </div>
+          <div class="flex gap-4 justify-center flex-wrap">
+            <button id="team1-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">✗ Team 1 Wrong</button>
+            <button id="team2-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">✗ Team 2 Wrong</button>
+          </div>
+          <div class="mt-6">
+            <button id="no-answer-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg text-lg transition-all">No One Answered</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Round Modal -->
+    <div id="final-modal" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-50">
+      <div class="question-modal animate-modal rounded-lg p-10 max-w-4xl w-full text-center">
+        <h2 class="game-font text-6xl text-yellow-400 mb-8">FINAL ROUND!</h2>
+        <div id="fj-question-section">
+          <p id="final-question-text" class="text-white text-4xl md:text-5xl mb-12 leading-relaxed font-bold">Martel Stone holds this three-word position at Dogon Restaurant in Washington, DC.</p>
+          <button id="fj-proceed-btn" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105">Ready for Wagers</button>
+        </div>
+        <div id="fj-wager-section" class="hidden">
+          <p id="final-question-text-2" class="text-white text-4xl md:text-5xl mb-12 leading-relaxed font-bold">Martel Stone holds this three-word position at Dogon Restaurant in Washington, DC.</p>
+          <p class="text-yellow-400 text-3xl mb-8 mt-8">Teams, enter your wagers!</p>
+          <div class="space-y-6">
+            <div class="bg-blue-900/50 p-6 rounded-lg">
+              <p class="text-yellow-400 text-2xl mb-4">Team 1 - Enter Wager Amount:</p>
+              <input type="number" id="team1-wager" min="0" max="99999" placeholder="0" class="w-48 px-4 py-3 text-2xl text-center bg-slate-800 text-white border-2 border-yellow-500 rounded-lg mb-4">
+              <button id="team1-fj-submit" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105">Submit Wager</button>
+              <p id="team1-submitted" class="hidden text-green-400 text-lg mt-2">✓ Wager Submitted</p>
+            </div>
+            <div class="bg-blue-900/50 p-6 rounded-lg">
+              <p class="text-yellow-400 text-2xl mb-4">Team 2 - Enter Wager Amount:</p>
+              <input type="number" id="team2-wager" min="0" max="99999" placeholder="0" class="w-48 px-4 py-3 text-2xl text-center bg-slate-800 text-white border-2 border-yellow-500 rounded-lg mb-4">
+              <button id="team2-fj-submit" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105">Submit Wager</button>
+              <p id="team2-submitted" class="hidden text-green-400 text-lg mt-2">✓ Wager Submitted</p>
+            </div>
+          </div>
+          <button id="fj-reveal-answer-btn" class="mt-8 bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105" disabled>Reveal Answer (Both Teams Must Wager)</button>
+        </div>
+        <div id="fj-answer-section" class="hidden">
+          <p id="final-answer-text" class="text-yellow-400 text-5xl mb-12 font-bold">Chef de Cuisine</p>
+          <div class="space-y-6">
+            <div class="bg-blue-900/50 p-6 rounded-lg">
+              <p class="text-yellow-400 text-2xl mb-2">Team 1</p>
+              <p class="text-white text-xl mb-4">Wagered: <span id="team1-wager-display" class="money-font text-2xl"></span></p>
+              <div class="flex gap-4 justify-center">
+                <button id="team1-fj-correct" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">✓ Correct</button>
+                <button id="team1-fj-wrong" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">✗ Wrong</button>
+              </div>
+            </div>
+            <div class="bg-blue-900/50 p-6 rounded-lg">
+              <p class="text-yellow-400 text-2xl mb-2">Team 2</p>
+              <p class="text-white text-xl mb-4">Wagered: <span id="team2-wager-display" class="money-font text-2xl"></span></p>
+              <div class="flex gap-4 justify-center">
+                <button id="team2-fj-correct" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">✓ Correct</button>
+                <button id="team2-fj-wrong" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">✗ Wrong</button>
+              </div>
+            </div>
+          </div>
+          <button id="fj-close-btn" class="mt-8 bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105">Show Final Scores &amp; Winner</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-50">
+      <div class="question-modal animate-modal rounded-lg p-10 max-w-lg w-full text-center">
+        <h2 class="game-font text-5xl text-yellow-400 mb-6">GAME OVER!</h2>
+        <p class="text-white text-2xl mb-4">Final Scores</p>
+        <div class="mb-4">
+          <p class="text-yellow-400 text-xl mb-2">Team 1</p>
+          <p id="final-score-team1" class="money-font text-5xl mb-4"></p>
+        </div>
+        <div class="mb-8">
+          <p class="text-yellow-400 text-xl mb-2">Team 2</p>
+          <p id="final-score-team2" class="money-font text-5xl"></p>
+        </div>
+        <p id="winner-text" class="text-yellow-400 text-3xl mb-8 game-font"></p>
+        <button id="play-again-btn" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Audio
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playCorrectSound() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.4);
+    }
+
+    function playIncorrectSound() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    }
+
+    // Question Data - loaded from Supabase
+    let round1Questions = {};
+    let round2Questions = {};
+    let finalRoundData = { question: '', answer: '' };
+    let round1Categories = [];
+    let round2Categories = [];
+    let categoryNames = { round1: [], round2: [] };
+
+    // Load questions from Supabase
+    async function loadQuestions() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const licenseKey = urlParams.get('license');
+      
+      if (!licenseKey) {
+        showError('No license key provided. Please launch the game from your dashboard.');
+        return false;
+      }
+
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${licenseKey}&order=round,category,value`,
+          {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+          }
+        );
+        
+        const questions = await response.json();
+        
+        if (!questions || questions.length === 0) {
+          showError('No questions found for this license. Please add questions in your dashboard first.');
+          return false;
+        }
+
+        // Group questions by round and category
+        const r1 = {};
+        const r2 = {};
+        const r1Cats = new Set();
+        const r2Cats = new Set();
+        const r1CatNames = {};
+        const r2CatNames = {};
+        
+        questions.forEach(q => {
+          const catKey = q.category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          
+          if (q.round === 1) {
+            if (!r1[catKey]) r1[catKey] = [];
+            r1[catKey].push({ q: q.question, a: q.answer, value: q.value });
+            r1Cats.add(catKey);
+            r1CatNames[catKey] = q.category;
+          } else if (q.round === 2) {
+            if (!r2[catKey]) r2[catKey] = [];
+            r2[catKey].push({ q: q.question, a: q.answer, value: q.value });
+            r2Cats.add(catKey);
+            r2CatNames[catKey] = q.category;
+          } else if (q.round === 3) {
+            finalRoundData = { question: q.question, answer: q.answer };
+          }
+        });
+
+        // Sort questions by value within each category
+        Object.keys(r1).forEach(cat => r1[cat].sort((a, b) => a.value - b.value));
+        Object.keys(r2).forEach(cat => r2[cat].sort((a, b) => a.value - b.value));
+
+        round1Questions = r1;
+        round2Questions = r2;
+        round1Categories = Array.from(r1Cats);
+        round2Categories = Array.from(r2Cats);
+        categoryNames = {
+          round1: round1Categories.map(c => r1CatNames[c]),
+          round2: round2Categories.map(c => r2CatNames[c])
+        };
+
+        return true;
+      } catch (err) {
+        console.error('Error loading questions:', err);
+        showError('Error loading questions. Please try again.');
+        return false;
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('error-screen').classList.remove('hidden');
+      document.getElementById('error-message').textContent = message;
+    }
+
+    function showGame() {
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+    }
+
+    // Game State
+    let currentRound = 1;
+    let questions = round1Questions;
+    let categories = round1Categories;
+    let scoreTeam1 = 0;
+    let scoreTeam2 = 0;
+    let usedCards = { round1: new Set(), round2: new Set() };
+    let currentQuestion = null;
+    let team1FJAnswered = false;
+    let team2FJAnswered = false;
+    let team1FJWagered = false;
+    let team2FJWagered = false;
+    let team1Wager = 0;
+    let team2Wager = 0;
+
+    function switchRound(round) {
+      currentRound = round;
+      if (round === 1) {
+        questions = round1Questions;
+        categories = round1Categories;
+        document.getElementById('round1-btn').className = "bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105";
+        document.getElementById('round2-btn').className = "bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600";
+        document.getElementById('final-btn').className = "bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600";
+      } else {
+        questions = round2Questions;
+        categories = round2Categories;
+        document.getElementById('round1-btn').className = "bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600";
+        document.getElementById('round2-btn').className = "bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105";
+        document.getElementById('final-btn').className = "bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600";
+      }
+      renderBoard();
+    }
+
+    function showFinalRound() {
+      team1FJAnswered = false;
+      team2FJAnswered = false;
+      team1FJWagered = false;
+      team2FJWagered = false;
+      team1Wager = 0;
+      team2Wager = 0;
+      
+      document.getElementById('team1-wager').value = '';
+      document.getElementById('team2-wager').value = '';
+      document.getElementById('team1-wager').disabled = false;
+      document.getElementById('team2-wager').disabled = false;
+      document.getElementById('fj-question-section').classList.remove('hidden');
+      document.getElementById('fj-wager-section').classList.add('hidden');
+      document.getElementById('fj-answer-section').classList.add('hidden');
+      document.getElementById('team1-submitted').classList.add('hidden');
+      document.getElementById('team2-submitted').classList.add('hidden');
+      document.getElementById('team1-fj-submit').disabled = false;
+      document.getElementById('team2-fj-submit').disabled = false;
+      document.getElementById('fj-reveal-answer-btn').disabled = true;
+      
+      document.getElementById('final-question-text').textContent = finalRoundData.question;
+      document.getElementById('final-question-text-2').textContent = finalRoundData.question;
+      document.getElementById('final-answer-text').textContent = finalRoundData.answer;
+      
+      const modal = document.getElementById('final-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function proceedToFJWagers() {
+      document.getElementById('fj-question-section').classList.add('hidden');
+      document.getElementById('fj-wager-section').classList.remove('hidden');
+    }
+    
+    function submitFJWager(team) {
+      const wagerInput = document.getElementById(`team${team}-wager`);
+      const wager = parseInt(wagerInput.value) || 0;
+      
+      if (team === 1) {
+        team1Wager = wager;
+        team1FJWagered = true;
+        document.getElementById('team1-submitted').classList.remove('hidden');
+        document.getElementById('team1-fj-submit').disabled = true;
+        wagerInput.disabled = true;
+      } else if (team === 2) {
+        team2Wager = wager;
+        team2FJWagered = true;
+        document.getElementById('team2-submitted').classList.remove('hidden');
+        document.getElementById('team2-fj-submit').disabled = true;
+        wagerInput.disabled = true;
+      }
+      
+      if (team1FJWagered && team2FJWagered) {
+        document.getElementById('fj-reveal-answer-btn').disabled = false;
+      }
+    }
+
+    function revealFJAnswer() {
+      document.getElementById('fj-wager-section').classList.add('hidden');
+      document.getElementById('fj-answer-section').classList.remove('hidden');
+      document.getElementById('team1-wager-display').textContent = `$${team1Wager}`;
+      document.getElementById('team2-wager-display').textContent = `$${team2Wager}`;
+    }
+
+    function handleFinalRound(team, correct) {
+      if (correct) {
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
+      }
+      
+      if (team === 1 && !team1FJAnswered) {
+        if (correct) {
+          scoreTeam1 += team1Wager;
+        } else {
+          scoreTeam1 -= team1Wager;
+        }
+        team1FJAnswered = true;
+        document.getElementById('team1-fj-correct').disabled = true;
+        document.getElementById('team1-fj-wrong').disabled = true;
+      } else if (team === 2 && !team2FJAnswered) {
+        if (correct) {
+          scoreTeam2 += team2Wager;
+        } else {
+          scoreTeam2 -= team2Wager;
+        }
+        team2FJAnswered = true;
+        document.getElementById('team2-fj-correct').disabled = true;
+        document.getElementById('team2-fj-wrong').disabled = true;
+      }
+      
+      updateScore();
+    }
+
+    function closeFinalRound() {
+      document.getElementById('final-modal').classList.add('hidden');
+      document.getElementById('final-modal').classList.remove('flex');
+      showGameOver();
+    }
+
+    function initGame() {
+      scoreTeam1 = 0;
+      scoreTeam2 = 0;
+      usedCards = { round1: new Set(), round2: new Set() };
+      currentRound = 1;
+      questions = round1Questions;
+      categories = round1Categories;
+      team1FJAnswered = false;
+      team2FJAnswered = false;
+      team1FJWagered = false;
+      team2FJWagered = false;
+      team1Wager = 0;
+      team2Wager = 0;
+      updateScore();
+      renderBoard();
+      document.getElementById('game-over-modal').classList.add('hidden');
+      document.getElementById('game-over-modal').classList.remove('flex');
+      document.getElementById('round1-btn').className = "bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105";
+      document.getElementById('round2-btn').className = "bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600";
+      document.getElementById('final-btn').className = "bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600";
+      document.getElementById('team1-fj-correct').disabled = false;
+      document.getElementById('team1-fj-wrong').disabled = false;
+      document.getElementById('team2-fj-correct').disabled = false;
+      document.getElementById('team2-fj-wrong').disabled = false;
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('game-board');
+      board.innerHTML = '';
+      
+      const categoryLabels = currentRound === 1 ? categoryNames.round1 : categoryNames.round2;
+      const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
+      
+      categoryLabels.forEach(name => {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'category-font text-center text-white text-xs md:text-sm lg:text-base p-2 md:p-3 bg-blue-900 rounded flex items-center justify-center font-bold';
+        catDiv.textContent = name;
+        board.appendChild(catDiv);
+      });
+
+      for (let row = 0; row < 5; row++) {
+        categories.forEach((cat) => {
+          const question = questions[cat][row];
+          const cardId = `${cat}-${row}`;
+          const card = document.createElement('button');
+          card.className = `card rounded-lg flex items-center justify-center cursor-pointer ${currentUsedCards.has(cardId) ? 'used' : ''}`;
+          card.dataset.category = cat;
+          card.dataset.row = row;
+          card.dataset.id = cardId;
+          card.innerHTML = currentUsedCards.has(cardId) 
+            ? '' 
+            : `<span class="money-font text-2xl md:text-3xl lg:text-4xl">$${question.value}</span>`;
+          
+          if (!currentUsedCards.has(cardId)) {
+            card.onclick = () => openQuestion(cat, row);
+          }
+          
+          board.appendChild(card);
+        });
+      }
+    }
+
+    function openQuestion(category, row) {
+      const question = questions[category][row];
+      currentQuestion = { category, row, value: question.value };
+      
+      document.getElementById('modal-value').textContent = `$${question.value}`;
+      document.getElementById('modal-question').textContent = question.q;
+      document.getElementById('answer-section').classList.remove('hidden');
+      document.getElementById('result-section').classList.add('hidden');
+      
+      const modal = document.getElementById('modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function revealAnswer() {
+      const question = questions[currentQuestion.category][currentQuestion.row];
+      document.getElementById('modal-answer').textContent = question.a;
+      document.getElementById('answer-section').classList.add('hidden');
+      document.getElementById('result-section').classList.remove('hidden');
+    }
+
+    function handleAnswer(team, correct) {
+      if (currentQuestion) {
+        if (correct) {
+          playCorrectSound();
+        } else {
+          playIncorrectSound();
+        }
+        
+        if (team === 1) {
+          if (correct) {
+            scoreTeam1 += currentQuestion.value;
+          } else {
+            scoreTeam1 -= currentQuestion.value;
+          }
+        } else if (team === 2) {
+          if (correct) {
+            scoreTeam2 += currentQuestion.value;
+          } else {
+            scoreTeam2 -= currentQuestion.value;
+          }
+        }
+        updateScore();
+        markCardUsed();
+      }
+      closeModal();
+    }
+
+    function handleNoAnswer() {
+      markCardUsed();
+      closeModal();
+    }
+
+    function markCardUsed() {
+      if (currentQuestion) {
+        const cardId = `${currentQuestion.category}-${currentQuestion.row}`;
+        const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
+        currentUsedCards.add(cardId);
+        
+        const card = document.querySelector(`[data-id="${cardId}"]`);
+        if (card) {
+          card.classList.add('used');
+          card.innerHTML = '';
+          card.onclick = null;
+        }
+      }
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      currentQuestion = null;
+    }
+
+    function updateScore() {
+      const scoreEl1 = document.getElementById('score-team1');
+      const scoreEl2 = document.getElementById('score-team2');
+      
+      scoreEl1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
+      scoreEl1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
+      
+      scoreEl2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
+      scoreEl2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
+    }
+
+    function showGameOver() {
+      const finalScore1 = document.getElementById('final-score-team1');
+      const finalScore2 = document.getElementById('final-score-team2');
+      const winnerText = document.getElementById('winner-text');
+      
+      finalScore1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
+      finalScore1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
+      
+      finalScore2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
+      finalScore2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
+      
+      if (scoreTeam1 > scoreTeam2) {
+        winnerText.textContent = '🏆 TEAM 1 WINS! 🏆';
+      } else if (scoreTeam2 > scoreTeam1) {
+        winnerText.textContent = '🏆 TEAM 2 WINS! 🏆';
+      } else {
+        winnerText.textContent = "IT'S A TIE!";
+      }
+      
+      const modal = document.getElementById('game-over-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // Event Listeners
+    document.getElementById('reveal-btn').onclick = revealAnswer;
+    document.getElementById('team1-correct-btn').onclick = () => handleAnswer(1, true);
+    document.getElementById('team2-correct-btn').onclick = () => handleAnswer(2, true);
+    document.getElementById('team1-wrong-btn').onclick = () => handleAnswer(1, false);
+    document.getElementById('team2-wrong-btn').onclick = () => handleAnswer(2, false);
+    document.getElementById('no-answer-btn').onclick = handleNoAnswer;
+    document.getElementById('play-again-btn').onclick = initGame;
+    document.getElementById('round1-btn').onclick = () => switchRound(1);
+    document.getElementById('round2-btn').onclick = () => switchRound(2);
+    document.getElementById('final-btn').onclick = showFinalRound;
+    document.getElementById('fj-proceed-btn').onclick = proceedToFJWagers;
+    document.getElementById('team1-fj-submit').onclick = () => submitFJWager(1);
+    document.getElementById('team2-fj-submit').onclick = () => submitFJWager(2);
+    document.getElementById('fj-reveal-answer-btn').onclick = revealFJAnswer;
+    document.getElementById('team1-fj-correct').onclick = () => handleFinalRound(1, true);
+    document.getElementById('team1-fj-wrong').onclick = () => handleFinalRound(1, false);
+    document.getElementById('team2-fj-correct').onclick = () => handleFinalRound(2, true);
+    document.getElementById('team2-fj-wrong').onclick = () => handleFinalRound(2, false);
+    document.getElementById('fj-close-btn').onclick = closeFinalRound;
+
+    document.getElementById('modal').onclick = (e) => {
+      if (e.target.id === 'modal') {
+        closeModal();
+      }
+    };
+
+    // Initialize - load questions then start game
+    async function startApp() {
+      const success = await loadQuestions();
+      if (success) {
+        showGame();
+        initGame();
+      }
+    }
+    
+    startApp();
+  </script>
+</body>
+</html>
