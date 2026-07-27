@@ -15,19 +15,76 @@
     .game-font { font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif; letter-spacing: 2px; }
     .category-font { font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
     .money-font { font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif; color: #D4AF37; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
-    .card { background: linear-gradient(145deg, #1e3a8a, #1e40af); border: 3px solid #1e3a8a; box-shadow: inset 0 0 20px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.3); transition: all 0.3s ease; }
-    .card:hover:not(.used) { transform: scale(1.05); box-shadow: 0 0 20px rgba(212, 175, 55, 0.5); border-color: #D4AF37; }
-    .card.used { background: linear-gradient(145deg, #0f172a, #1e293b); opacity: 0.4; cursor: default; }
-    .question-modal { background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%); border: 4px solid #D4AF37; box-shadow: 0 0 60px rgba(212, 175, 55, 0.3); }
-    @keyframes slideIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    @keyframes pulse { 0%, 100% { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); } 50% { text-shadow: 0 0 30px rgba(212, 175, 55, 0.8); } }
-    .animate-modal { animation: slideIn 0.3s ease-out; }
-    .score-display { animation: pulse 2s infinite; }
-    .btn-answer { background: linear-gradient(145deg, #15803d, #166534); border: 2px solid #22c55e; transition: all 0.2s ease; }
-    .btn-answer:hover { background: linear-gradient(145deg, #16a34a, #15803d); transform: translateY(-2px); }
-    .btn-wrong { background: linear-gradient(145deg, #b91c1c, #991b1b); border: 2px solid #ef4444; }
-    .btn-wrong:hover { background: linear-gradient(145deg, #dc2626, #b91c1c); transform: translateY(-2px); }
+    .card {
+      background: linear-gradient(145deg, #1e3a8a, #1e40af);
+      border: 3px solid #1e3a8a;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+      min-height: 80px;
+    }
+    .card:hover:not(.used):not(.empty) {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+      border-color: #D4AF37;
+    }
+    .card.used {
+      background: linear-gradient(145deg, #0f172a, #1e293b);
+      opacity: 0.4;
+      cursor: default;
+    }
+    .card.empty {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      opacity: 0.25;
+      cursor: default;
+      border-color: #334155;
+    }
+    .category-header {
+      background: linear-gradient(145deg, #1e3a8a, #1e40af);
+      border: 3px solid #1e3a8a;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .question-modal {
+      background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+      border: 4px solid #D4AF37;
+      box-shadow: 0 0 60px rgba(212, 175, 55, 0.3);
+    }
+    @keyframes slideIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    @keyframes pulse {
+      0%, 100% { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+      50% { text-shadow: 0 0 30px rgba(212, 175, 55, 0.8); }
+    }
+    .animate-modal {
+      animation: slideIn 0.3s ease-out;
+    }
+    .score-display {
+      animation: pulse 2s infinite;
+    }
+    .btn-answer {
+      background: linear-gradient(145deg, #15803d, #166534);
+      border: 2px solid #22c55e;
+      transition: all 0.2s ease;
+    }
+    .btn-answer:hover {
+      background: linear-gradient(145deg, #16a34a, #15803d);
+      transform: translateY(-2px);
+    }
+    .btn-wrong {
+      background: linear-gradient(145deg, #b91c1c, #991b1b);
+      border: 2px solid #ef4444;
+    }
+    .btn-wrong:hover {
+      background: linear-gradient(145deg, #dc2626, #b91c1c);
+      transform: translateY(-2px);
+    }
   </style>
+<base target="_blank">
 </head>
 <body class="h-full bg-slate-900 overflow-auto">
   <div id="loading-screen" class="h-full flex items-center justify-center">
@@ -60,7 +117,8 @@
     </header>
     <main class="flex-1 p-4 md:p-6 overflow-auto">
       <div class="max-w-7xl mx-auto h-full">
-        <div id="game-board" class="grid grid-cols-6 gap-2 md:gap-3 h-full min-h-96"></div>
+        <!-- GRID FIX: Removed hardcoded grid-cols-6, will be set dynamically via JS -->
+        <div id="game-board" class="grid gap-2 md:gap-3 h-full min-h-96"></div>
       </div>
     </main>
     <div id="modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
@@ -184,57 +242,40 @@
     let round2Categories = [];
     let categoryNames = { round1: [], round2: [] };
 
-    // SECURITY FIX: Read license from sessionStorage (set by dashboard) instead of URL
-    // Falls back to URL for backward compatibility
     function getLicenseKey() {
       const fromStorage = sessionStorage.getItem('jeopardy_game_license');
       if (fromStorage) return fromStorage;
-      
       const urlParams = new URLSearchParams(window.location.search);
-      const fromUrl = urlParams.get('license');
-      return fromUrl;
+      return urlParams.get('license');
     }
 
     async function loadQuestions() {
       const licenseKey = getLicenseKey();
-      
       if (!licenseKey) {
         showError('No license key provided. Please launch the game from your dashboard.');
         return false;
       }
-
       try {
         const response = await fetch(
           `${SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(licenseKey)}&order=round,category,value`,
-          {
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`
-            }
-          }
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
         );
-        
         if (!response.ok) {
           throw new Error(`Server returned ${response.status}: ${response.statusText}`);
         }
-        
         const questions = await response.json();
-        
         if (!questions || questions.length === 0) {
           showError('No questions found for this license. Please add questions in your dashboard first.');
           return false;
         }
-
         const r1 = Object.create(null);
         const r2 = Object.create(null);
         const r1Cats = new Set();
         const r2Cats = new Set();
         const r1CatNames = Object.create(null);
         const r2CatNames = Object.create(null);
-        
         questions.forEach(q => {
           const catKey = q.category.toLowerCase().replace(/[^a-z0-9]/g, '_');
-          
           if (q.round === 1) {
             if (!r1[catKey]) r1[catKey] = [];
             r1[catKey].push({ q: q.question, a: q.answer, value: q.value });
@@ -249,10 +290,8 @@
             finalRoundData = { question: q.question, answer: q.answer };
           }
         });
-
         Object.keys(r1).forEach(cat => r1[cat].sort((a, b) => a.value - b.value));
         Object.keys(r2).forEach(cat => r2[cat].sort((a, b) => a.value - b.value));
-
         round1Questions = r1;
         round2Questions = r2;
         round1Categories = Array.from(r1Cats);
@@ -261,7 +300,6 @@
           round1: round1Categories.map(c => r1CatNames[c]),
           round2: round2Categories.map(c => r2CatNames[c])
         };
-
         return true;
       } catch (err) {
         console.error('Error loading questions:', err);
@@ -275,7 +313,6 @@
       document.getElementById('error-screen').classList.remove('hidden');
       document.getElementById('error-message').textContent = message;
     }
-
     function showGame() {
       document.getElementById('loading-screen').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
@@ -337,11 +374,10 @@
       document.getElementById('fj-question-section').classList.add('hidden');
       document.getElementById('fj-wager-section').classList.remove('hidden');
     }
-    
+
     function submitFJWager(team) {
       const wagerInput = document.getElementById(`team${team}-wager`);
       const wager = parseInt(wagerInput.value) || 0;
-      
       if (team === 1) {
         team1Wager = wager; team1FJWagered = true;
         document.getElementById('team1-submitted').classList.remove('hidden');
@@ -353,7 +389,6 @@
         document.getElementById('team2-fj-submit').disabled = true;
         wagerInput.disabled = true;
       }
-      
       if (team1FJWagered && team2FJWagered) {
         document.getElementById('fj-reveal-answer-btn').disabled = false;
       }
@@ -368,7 +403,6 @@
 
     function handleFinalRound(team, correct) {
       if (correct) { playCorrectSound(); } else { playIncorrectSound(); }
-      
       if (team === 1 && !team1FJAnswered) {
         if (correct) { scoreTeam1 += team1Wager; } else { scoreTeam1 -= team1Wager; }
         team1FJAnswered = true;
@@ -380,7 +414,6 @@
         document.getElementById('team2-fj-correct').disabled = true;
         document.getElementById('team2-fj-wrong').disabled = true;
       }
-      
       updateScore();
     }
 
@@ -410,45 +443,68 @@
       document.getElementById('team2-fj-wrong').disabled = false;
     }
 
+    // GRID FIX: Dynamic columns, always 5 rows, never skips a cell
     function renderBoard() {
       const board = document.getElementById('game-board');
       board.innerHTML = '';
-      
+
       const categoryLabels = currentRound === 1 ? categoryNames.round1 : categoryNames.round2;
       const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
-      
+      const numCats = categories.length;
+
+      if (numCats === 0) {
+        board.innerHTML = '<p class="text-white text-center col-span-full">No categories found for this round.</p>';
+        return;
+      }
+
+      // Set grid columns dynamically based on actual number of categories
+      board.style.gridTemplateColumns = `repeat(${numCats}, minmax(0, 1fr))`;
+
+      // Render category headers - one per column
       categoryLabels.forEach(name => {
         const catDiv = document.createElement('div');
-        catDiv.className = 'category-font text-center text-white text-xs md:text-sm lg:text-base p-2 md:p-3 bg-blue-900 rounded flex items-center justify-center font-bold';
-        catDiv.textContent = name;
+        catDiv.className = 'category-header rounded-lg category-font text-center text-white text-xs md:text-sm lg:text-base p-2 font-bold';
+        catDiv.textContent = name || '???';
         board.appendChild(catDiv);
       });
 
-      for (let row = 0; row < 5; row++) {
+      // Render exactly 5 value rows per category
+      // If a category has fewer than 5 questions, show an empty placeholder
+      // so the grid alignment never breaks
+      const EXPECTED_ROWS = 5;
+      const EXPECTED_VALUES = [100, 200, 300, 400, 500];
+
+      for (let row = 0; row < EXPECTED_ROWS; row++) {
         categories.forEach((cat) => {
-          const question = questions[cat]?.[row];
-          if (!question) return;
-          
+          const catQuestions = questions[cat] || [];
+          const question = catQuestions[row];
           const cardId = `${cat}-${row}`;
+          const isUsed = currentUsedCards.has(cardId);
+
           const card = document.createElement('button');
-          card.className = `card rounded-lg flex items-center justify-center cursor-pointer ${currentUsedCards.has(cardId) ? 'used' : ''}`;
+          card.className = 'card rounded-lg flex items-center justify-center';
           card.dataset.category = cat;
           card.dataset.row = row;
           card.dataset.id = cardId;
-          
-          if (currentUsedCards.has(cardId)) {
+
+          if (isUsed) {
+            card.classList.add('used');
             card.textContent = '';
-          } else {
+          } else if (question) {
             const span = document.createElement('span');
             span.className = 'money-font text-2xl md:text-3xl lg:text-4xl';
             span.textContent = `$${question.value}`;
             card.appendChild(span);
-          }
-          
-          if (!currentUsedCards.has(cardId)) {
             card.onclick = () => openQuestion(cat, row);
+          } else {
+            // Empty placeholder - keeps grid aligned when category has fewer than 5 questions
+            card.classList.add('empty');
+            const span = document.createElement('span');
+            span.className = 'money-font text-xl md:text-2xl opacity-30';
+            span.textContent = `$${EXPECTED_VALUES[row]}`;
+            card.appendChild(span);
           }
-          
+
           board.appendChild(card);
         });
       }
@@ -456,13 +512,12 @@
 
     function openQuestion(category, row) {
       const question = questions[category][row];
+      if (!question) return;
       currentQuestion = { category, row, value: question.value };
-      
       document.getElementById('modal-value').textContent = `$${question.value}`;
       document.getElementById('modal-question').textContent = question.q;
       document.getElementById('answer-section').classList.remove('hidden');
       document.getElementById('result-section').classList.add('hidden');
-      
       const modal = document.getElementById('modal');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
@@ -478,7 +533,6 @@
     function handleAnswer(team, correct) {
       if (currentQuestion) {
         if (correct) { playCorrectSound(); } else { playIncorrectSound(); }
-        
         if (team === 1) {
           if (correct) { scoreTeam1 += currentQuestion.value; } else { scoreTeam1 -= currentQuestion.value; }
         } else if (team === 2) {
@@ -500,7 +554,6 @@
         const cardId = `${currentQuestion.category}-${currentQuestion.row}`;
         const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
         currentUsedCards.add(cardId);
-        
         const card = document.querySelector(`[data-id="${cardId}"]`);
         if (card) {
           card.classList.add('used');
@@ -520,10 +573,8 @@
     function updateScore() {
       const scoreEl1 = document.getElementById('score-team1');
       const scoreEl2 = document.getElementById('score-team2');
-      
       scoreEl1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
       scoreEl1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
-      
       scoreEl2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
       scoreEl2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
     }
@@ -532,13 +583,10 @@
       const finalScore1 = document.getElementById('final-score-team1');
       const finalScore2 = document.getElementById('final-score-team2');
       const winnerText = document.getElementById('winner-text');
-      
       finalScore1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
       finalScore1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
-      
       finalScore2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
       finalScore2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
-      
       if (scoreTeam1 > scoreTeam2) {
         winnerText.textContent = '🏆 TEAM 1 WINS! 🏆';
       } else if (scoreTeam2 > scoreTeam1) {
@@ -546,7 +594,6 @@
       } else {
         winnerText.textContent = "IT'S A TIE!";
       }
-      
       const modal = document.getElementById('game-over-modal');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
@@ -583,7 +630,6 @@
         initGame();
       }
     }
-    
     startApp();
   </script>
 </body>
