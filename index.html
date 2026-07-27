@@ -9,6 +9,7 @@
   <style>
     body { font-family: 'Inter', sans-serif; }
   </style>
+<base target="_blank">
 </head>
 <body class="bg-gray-100 min-h-screen">
 
@@ -190,7 +191,7 @@
       const licenseKey = document.getElementById('license-input').value.trim();
       const btn = document.getElementById('verify-btn');
       const error = document.getElementById('login-error');
-      
+
       if (!licenseKey) {
         error.textContent = 'Please enter a license key';
         error.classList.remove('hidden');
@@ -215,10 +216,10 @@
         if (data.success) {
           currentLicense = licenseKey;
           currentEmail = data.purchase.email;
-          
+
           // Save to Supabase
           await saveLicense(licenseKey, currentEmail);
-          
+
           // Save to sessionStorage (NOT localStorage) - key disappears when browser closes
           sessionStorage.setItem('jeopardy_license', JSON.stringify({
             license: licenseKey,
@@ -323,43 +324,43 @@
         Object.keys(grouped).sort().forEach(key => {
           const groupDiv = document.createElement('div');
           groupDiv.className = 'border rounded-lg p-3 mb-2';
-          
+
           const header = document.createElement('h3');
           header.className = 'font-medium text-gray-700';
           header.textContent = key;
           groupDiv.appendChild(header);
-          
+
           const itemsDiv = document.createElement('div');
           itemsDiv.className = 'mt-2 space-y-1';
-          
+
           grouped[key].forEach(q => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'flex justify-between items-start text-sm bg-gray-50 p-2 rounded';
-            
+
             const textDiv = document.createElement('div');
             textDiv.className = 'flex-1';
-            
+
             const valueSpan = document.createElement('span');
             valueSpan.className = 'text-blue-600 font-medium';
             valueSpan.textContent = `$${q.value}: `;
-            
+
             const questionText = document.createTextNode(
               q.question.substring(0, 80) + (q.question.length > 80 ? '...' : '')
             );
-            
+
             textDiv.appendChild(valueSpan);
             textDiv.appendChild(questionText);
-            
+
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'text-red-500 hover:text-red-700 ml-2';
             deleteBtn.textContent = '×';
             deleteBtn.onclick = () => deleteQuestion(q.id);
-            
+
             itemDiv.appendChild(textDiv);
             itemDiv.appendChild(deleteBtn);
             itemsDiv.appendChild(itemDiv);
           });
-          
+
           groupDiv.appendChild(itemsDiv);
           list.appendChild(groupDiv);
         });
@@ -407,11 +408,11 @@
           msg.textContent = 'Question added!';
           msg.className = 'text-center text-green-600';
           msg.classList.remove('hidden');
-          
+
           document.getElementById('add-category').value = '';
           document.getElementById('add-question').value = '';
           document.getElementById('add-answer').value = '';
-          
+
           setTimeout(() => msg.classList.add('hidden'), 2000);
         } else {
           throw new Error('Failed to add');
@@ -446,7 +447,7 @@
       }
     }
 
-    // Download CSV template
+    // Download CSV template - NOW WITH 6 CATEGORIES
     function downloadTemplate() {
       const template = `round,category,value,question,answer
 1,SCIENCE,100,This planet is known as the Red Planet.,What is Mars?
@@ -454,8 +455,31 @@
 1,SCIENCE,300,This scientist developed the theory of relativity.,Who is Einstein?
 1,SCIENCE,400,This is the hardest natural substance on Earth.,What is Diamond?
 1,SCIENCE,500,This organ produces insulin in the human body.,What is the Pancreas?
-2,HISTORY,200,This document was signed in 1776.,What is the Declaration of Independence?
-2,HISTORY,400,This war was fought from 1861-1865.,What is the Civil War?`;
+1,HISTORY,100,This document was signed in 1776.,What is the Declaration of Independence?
+1,HISTORY,200,This war was fought from 1861-1865.,What is the Civil War?
+1,HISTORY,300,This ancient wonder was located in Egypt.,What are the Pyramids?
+1,HISTORY,400,This empire was ruled by Julius Caesar.,What is the Roman Empire?
+1,HISTORY,500,This ship sank in 1912 on its maiden voyage.,What is the Titanic?
+1,GEOGRAPHY,100,This is the largest ocean on Earth.,What is the Pacific Ocean?
+1,GEOGRAPHY,200,This is the longest river in the world.,What is the Nile River?
+1,GEOGRAPHY,300,This is the smallest country in the world.,What is Vatican City?
+1,GEOGRAPHY,400,This desert is the largest hot desert in the world.,What is the Sahara Desert?
+1,GEOGRAPHY,500,This mountain range separates Europe and Asia.,What are the Ural Mountains?
+1,LITERATURE,100,This author wrote "Romeo and Juliet".,Who is William Shakespeare?
+1,LITERATURE,200,This novel features a whale named Moby Dick.,What is Moby Dick?
+1,LITERATURE,300,This wizard attends Hogwarts School.,Who is Harry Potter?
+1,LITERATURE,400,This dystopian novel features Big Brother.,What is 1984?
+1,LITERATURE,500,This epic poem tells of a journey home to Ithaca.,What is The Odyssey?
+1,ARTS,100,This artist painted the Mona Lisa.,Who is Leonardo da Vinci?
+1,ARTS,200,This composer was deaf but still wrote symphonies.,Who is Ludwig van Beethoven?
+1,ARTS,300,This ballet features a swan princess.,What is Swan Lake?
+1,ARTS,400,This painting shows melting clocks.,What is The Persistence of Memory?
+1,ARTS,500,This architectural style features flying buttresses.,What is Gothic architecture?
+1,SPORTS,100,This sport uses a bat and a ball.,What is baseball?
+1,SPORTS,200,This event happens every four years with athletes from all nations.,What are the Olympic Games?
+1,SPORTS,300,This sport is played on ice with skates.,What is ice hockey?
+1,SPORTS,400,This tennis tournament is played on grass courts.,What is Wimbledon?
+1,SPORTS,500,This ancient Greek sport is the origin of the marathon.,What is the Battle of Marathon?`;
 
       const blob = new Blob([template], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
@@ -475,7 +499,7 @@
         const text = e.target.result;
         const lines = text.trim().split('\n');
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-        
+
         csvData = [];
         for (let i = 1; i < lines.length; i++) {
           const values = parseCSVLine(lines[i]);
@@ -490,10 +514,11 @@
           }
         }
 
+        // Show preview
         const preview = document.getElementById('csv-preview');
         const content = document.getElementById('csv-preview-content');
         preview.classList.remove('hidden');
-        
+
         let html = `<p class="mb-2 font-medium">${csvData.length} questions found:</p>`;
         csvData.slice(0, 5).forEach(q => {
           html += `<div class="border-b py-1">R${q.round} | ${q.category} | $${q.value} | ${q.question.substring(0, 40)}...</div>`;
@@ -511,7 +536,7 @@
       const result = [];
       let current = '';
       let inQuotes = false;
-      
+
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
         if (char === '"') {
@@ -530,7 +555,7 @@
     // Upload CSV questions to Supabase
     async function uploadCSV() {
       const msg = document.getElementById('upload-message');
-      
+
       if (csvData.length === 0) {
         msg.textContent = 'No questions to upload';
         msg.className = 'text-center text-red-500';
