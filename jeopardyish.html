@@ -447,10 +447,13 @@
       document.getElementById('team2-fj-wrong').disabled = false;
     }
 
-    // FIXED: Always 6 columns, pad with placeholders if fewer than 6 categories
+    // FIXED: Always 6 columns, fixed values per row based on round
     const MAX_CATEGORIES = 6;
     const EXPECTED_ROWS = 5;
-    const EXPECTED_VALUES = [100, 200, 300, 400, 500];
+    // Round 1: $100-$500. Round 2: $200-$1000. Each row is a fixed value.
+    const EXPECTED_VALUES = currentRound === 1
+      ? [100, 200, 300, 400, 500]
+      : [200, 400, 600, 800, 1000];
 
     function renderBoard() {
       const board = document.getElementById('game-board');
@@ -514,19 +517,22 @@
             card.textContent = '';
           } else {
             const catQuestions = questions[cat] || [];
-            const question = catQuestions[row];
+            const expectedValue = EXPECTED_VALUES[row];
+            // Look up question by matching the expected value (not by row index)
+            const question = catQuestions.find(q => q.value === expectedValue);
             if (question) {
               const span = document.createElement('span');
               span.className = 'money-font text-2xl md:text-3xl lg:text-4xl';
-              span.textContent = `$${question.value}`;
+              // Always show the expected row value, not the stored value
+              span.textContent = `$${expectedValue}`;
               card.appendChild(span);
-              card.onclick = () => openQuestion(cat, row);
+              card.onclick = () => openQuestionByValue(cat, expectedValue);
             } else {
               // Missing question in this slot
               card.classList.add('empty');
               const span = document.createElement('span');
               span.className = 'money-font text-xl md:text-2xl opacity-30';
-              span.textContent = `$${EXPECTED_VALUES[row]}`;
+              span.textContent = `$${expectedValue}`;
               card.appendChild(span);
             }
           }
@@ -536,11 +542,12 @@
       }
     }
 
-    function openQuestion(category, row) {
-      const question = questions[category][row];
+    function openQuestionByValue(category, value) {
+      const catQuestions = questions[category] || [];
+      const question = catQuestions.find(q => q.value === value);
       if (!question) return;
-      currentQuestion = { category, row, value: question.value };
-      document.getElementById('modal-value').textContent = `$${question.value}`;
+      currentQuestion = { category, value: value };
+      document.getElementById('modal-value').textContent = `$${value}`;
       document.getElementById('modal-question').textContent = question.q;
       document.getElementById('answer-section').classList.remove('hidden');
       document.getElementById('result-section').classList.add('hidden');
@@ -549,9 +556,18 @@
       modal.classList.add('flex');
     }
 
+    // Legacy function for backward compatibility
+    function openQuestion(category, row) {
+      const expectedValue = (currentRound === 1 ? [100,200,300,400,500] : [200,400,600,800,1000])[row];
+      openQuestionByValue(category, expectedValue);
+    }
+
     function revealAnswer() {
-      const question = questions[currentQuestion.category][currentQuestion.row];
-      document.getElementById('modal-answer').textContent = question.a;
+      const catQuestions = questions[currentQuestion.category] || [];
+      const question = catQuestions.find(q => q.value === currentQuestion.value);
+      if (question) {
+        document.getElementById('modal-answer').textContent = question.a;
+      }
       document.getElementById('answer-section').classList.add('hidden');
       document.getElementById('result-section').classList.remove('hidden');
     }
@@ -581,7 +597,10 @@
     function markCardUsed() {
       if (currentQuestion) {
         const catIndex = categories.indexOf(currentQuestion.category);
-        const cardId = `col${catIndex}-row${currentQuestion.row}`;
+        // Find the row index based on the value
+        const expectedValues = currentRound === 1 ? [100,200,300,400,500] : [200,400,600,800,1000];
+        const rowIndex = expectedValues.indexOf(currentQuestion.value);
+        const cardId = `col${catIndex}-row${rowIndex}`;
         const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
         currentUsedCards.add(cardId);
         const card = document.querySelector(`[data-id="${cardId}"]`);
