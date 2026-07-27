@@ -9,7 +9,6 @@
   <script>
     const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
-  </script>
   <style>
     body { box-sizing: border-box; }
     .game-font { font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif; letter-spacing: 2px; }
@@ -565,13 +564,16 @@
           if (correct) { scoreTeam2 += currentQuestion.value; } else { scoreTeam2 -= currentQuestion.value; }
         }
         updateScore();
-        markCardUsed();
+        // FIX: Only mark card used on correct answer. Wrong answers keep it on the board.
+        if (correct) {
+          markCardUsed();
+        }
       }
       closeModal();
     }
 
     function handleNoAnswer() {
-      markCardUsed();
+      // FIX: "No One Answered" keeps the card on the board for another try
       closeModal();
     }
 
