@@ -447,7 +447,7 @@
       }
     }
 
-    // Download CSV template - NOW WITH 6 CATEGORIES
+    // Download CSV template - NOW WITH 6 CATEGORIES + FINAL JEOPARDY
     function downloadTemplate() {
       const template = `round,category,value,question,answer
 1,SCIENCE,100,This planet is known as the Red Planet.,What is Mars?
@@ -479,7 +479,8 @@
 1,SPORTS,200,This event happens every four years with athletes from all nations.,What are the Olympic Games?
 1,SPORTS,300,This sport is played on ice with skates.,What is ice hockey?
 1,SPORTS,400,This tennis tournament is played on grass courts.,What is Wimbledon?
-1,SPORTS,500,This ancient Greek sport is the origin of the marathon.,What is the Battle of Marathon?`;
+1,SPORTS,500,This ancient Greek sport is the origin of the marathon.,What is the Battle of Marathon?
+3,FINAL,0,This is the only planet not named after a god.,What is Earth?`;
 
       const blob = new Blob([template], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
