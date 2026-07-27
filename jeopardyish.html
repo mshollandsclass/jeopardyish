@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jeopardyish Game</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'self';">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
   <script>
- const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
+    const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
   </script>
   <style>
     body { box-sizing: border-box; }
@@ -30,7 +28,6 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
     .btn-wrong { background: linear-gradient(145deg, #b91c1c, #991b1b); border: 2px solid #ef4444; }
     .btn-wrong:hover { background: linear-gradient(145deg, #dc2626, #b91c1c); transform: translateY(-2px); }
   </style>
-<base target="_blank">
 </head>
 <body class="h-full bg-slate-900 overflow-auto">
   <div id="loading-screen" class="h-full flex items-center justify-center">
@@ -187,47 +184,57 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
     let round2Categories = [];
     let categoryNames = { round1: [], round2: [] };
 
-    // Initialize Supabase client - automatically sends the user's login token
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // SECURITY FIX: Read license from sessionStorage (set by dashboard) instead of URL
+    // Falls back to URL for backward compatibility
+    function getLicenseKey() {
+      const fromStorage = sessionStorage.getItem('jeopardy_game_license');
+      if (fromStorage) return fromStorage;
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromUrl = urlParams.get('license');
+      return fromUrl;
+    }
 
     async function loadQuestions() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const licenseKey = urlParams.get('license');
+      const licenseKey = getLicenseKey();
+      
       if (!licenseKey) {
         showError('No license key provided. Please launch the game from your dashboard.');
         return false;
       }
 
-      // Check if user is logged in
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) {
-        showError('You must be logged in to play. Please return to the dashboard and log in.');
-        return false;
-      }
-
       try {
-        const { data: questions, error } = await supabaseClient
-          .from('jeopardy_questions')
-          .select('*')
-          .eq('license_key', licenseKey)
-          .order('round', { ascending: true })
-          .order('category', { ascending: true })
-          .order('value', { ascending: true });
-
-        if (error) throw error;
-
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(licenseKey)}&order=round,category,value`,
+          {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const questions = await response.json();
+        
         if (!questions || questions.length === 0) {
           showError('No questions found for this license. Please add questions in your dashboard first.');
           return false;
         }
+
         const r1 = Object.create(null);
         const r2 = Object.create(null);
         const r1Cats = new Set();
         const r2Cats = new Set();
         const r1CatNames = Object.create(null);
         const r2CatNames = Object.create(null);
+        
         questions.forEach(q => {
           const catKey = q.category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          
           if (q.round === 1) {
             if (!r1[catKey]) r1[catKey] = [];
             r1[catKey].push({ q: q.question, a: q.answer, value: q.value });
@@ -242,8 +249,10 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
             finalRoundData = { question: q.question, answer: q.answer };
           }
         });
+
         Object.keys(r1).forEach(cat => r1[cat].sort((a, b) => a.value - b.value));
         Object.keys(r2).forEach(cat => r2[cat].sort((a, b) => a.value - b.value));
+
         round1Questions = r1;
         round2Questions = r2;
         round1Categories = Array.from(r1Cats);
@@ -252,6 +261,7 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
           round1: round1Categories.map(c => r1CatNames[c]),
           round2: round2Categories.map(c => r2CatNames[c])
         };
+
         return true;
       } catch (err) {
         console.error('Error loading questions:', err);
@@ -259,15 +269,18 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
         return false;
       }
     }
+
     function showError(message) {
       document.getElementById('loading-screen').classList.add('hidden');
       document.getElementById('error-screen').classList.remove('hidden');
       document.getElementById('error-message').textContent = message;
     }
+
     function showGame() {
       document.getElementById('loading-screen').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
     }
+
     let currentRound = 1;
     let questions = round1Questions;
     let categories = round1Categories;
@@ -281,6 +294,7 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
     let team2FJWagered = false;
     let team1Wager = 0;
     let team2Wager = 0;
+
     function switchRound(round) {
       currentRound = round;
       if (round === 1) {
@@ -298,6 +312,7 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
       }
       renderBoard();
     }
+
     function showFinalRound() {
       team1FJAnswered = false; team2FJAnswered = false; team1FJWagered = false; team2FJWagered = false; team1Wager = 0; team2Wager = 0;
       document.getElementById('team1-wager').value = ''; document.getElementById('team2-wager').value = '';
@@ -317,13 +332,16 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
       modal.classList.remove('hidden');
       modal.classList.add('flex');
     }
+
     function proceedToFJWagers() {
       document.getElementById('fj-question-section').classList.add('hidden');
       document.getElementById('fj-wager-section').classList.remove('hidden');
     }
+    
     function submitFJWager(team) {
       const wagerInput = document.getElementById(`team${team}-wager`);
       const wager = parseInt(wagerInput.value) || 0;
+      
       if (team === 1) {
         team1Wager = wager; team1FJWagered = true;
         document.getElementById('team1-submitted').classList.remove('hidden');
@@ -335,18 +353,22 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
         document.getElementById('team2-fj-submit').disabled = true;
         wagerInput.disabled = true;
       }
+      
       if (team1FJWagered && team2FJWagered) {
         document.getElementById('fj-reveal-answer-btn').disabled = false;
       }
     }
+
     function revealFJAnswer() {
       document.getElementById('fj-wager-section').classList.add('hidden');
       document.getElementById('fj-answer-section').classList.remove('hidden');
       document.getElementById('team1-wager-display').textContent = `$${team1Wager}`;
       document.getElementById('team2-wager-display').textContent = `$${team2Wager}`;
     }
+
     function handleFinalRound(team, correct) {
       if (correct) { playCorrectSound(); } else { playIncorrectSound(); }
+      
       if (team === 1 && !team1FJAnswered) {
         if (correct) { scoreTeam1 += team1Wager; } else { scoreTeam1 -= team1Wager; }
         team1FJAnswered = true;
@@ -358,13 +380,16 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
         document.getElementById('team2-fj-correct').disabled = true;
         document.getElementById('team2-fj-wrong').disabled = true;
       }
+      
       updateScore();
     }
+
     function closeFinalRound() {
       document.getElementById('final-modal').classList.add('hidden');
       document.getElementById('final-modal').classList.remove('flex');
       showGameOver();
     }
+
     function initGame() {
       scoreTeam1 = 0; scoreTeam2 = 0;
       usedCards = { round1: new Set(), round2: new Set() };
@@ -384,27 +409,33 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
       document.getElementById('team2-fj-correct').disabled = false;
       document.getElementById('team2-fj-wrong').disabled = false;
     }
+
     function renderBoard() {
       const board = document.getElementById('game-board');
       board.innerHTML = '';
+      
       const categoryLabels = currentRound === 1 ? categoryNames.round1 : categoryNames.round2;
       const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
+      
       categoryLabels.forEach(name => {
         const catDiv = document.createElement('div');
         catDiv.className = 'category-font text-center text-white text-xs md:text-sm lg:text-base p-2 md:p-3 bg-blue-900 rounded flex items-center justify-center font-bold';
         catDiv.textContent = name;
         board.appendChild(catDiv);
       });
+
       for (let row = 0; row < 5; row++) {
         categories.forEach((cat) => {
           const question = questions[cat]?.[row];
           if (!question) return;
+          
           const cardId = `${cat}-${row}`;
           const card = document.createElement('button');
           card.className = `card rounded-lg flex items-center justify-center cursor-pointer ${currentUsedCards.has(cardId) ? 'used' : ''}`;
           card.dataset.category = cat;
           card.dataset.row = row;
           card.dataset.id = cardId;
+          
           if (currentUsedCards.has(cardId)) {
             card.textContent = '';
           } else {
@@ -413,33 +444,41 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
             span.textContent = `$${question.value}`;
             card.appendChild(span);
           }
+          
           if (!currentUsedCards.has(cardId)) {
             card.onclick = () => openQuestion(cat, row);
           }
+          
           board.appendChild(card);
         });
       }
     }
+
     function openQuestion(category, row) {
       const question = questions[category][row];
       currentQuestion = { category, row, value: question.value };
+      
       document.getElementById('modal-value').textContent = `$${question.value}`;
       document.getElementById('modal-question').textContent = question.q;
       document.getElementById('answer-section').classList.remove('hidden');
       document.getElementById('result-section').classList.add('hidden');
+      
       const modal = document.getElementById('modal');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
     }
+
     function revealAnswer() {
       const question = questions[currentQuestion.category][currentQuestion.row];
       document.getElementById('modal-answer').textContent = question.a;
       document.getElementById('answer-section').classList.add('hidden');
       document.getElementById('result-section').classList.remove('hidden');
     }
+
     function handleAnswer(team, correct) {
       if (currentQuestion) {
         if (correct) { playCorrectSound(); } else { playIncorrectSound(); }
+        
         if (team === 1) {
           if (correct) { scoreTeam1 += currentQuestion.value; } else { scoreTeam1 -= currentQuestion.value; }
         } else if (team === 2) {
@@ -450,15 +489,18 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
       }
       closeModal();
     }
+
     function handleNoAnswer() {
       markCardUsed();
       closeModal();
     }
+
     function markCardUsed() {
       if (currentQuestion) {
         const cardId = `${currentQuestion.category}-${currentQuestion.row}`;
         const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
         currentUsedCards.add(cardId);
+        
         const card = document.querySelector(`[data-id="${cardId}"]`);
         if (card) {
           card.classList.add('used');
@@ -467,28 +509,36 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
         }
       }
     }
+
     function closeModal() {
       const modal = document.getElementById('modal');
       modal.classList.add('hidden');
       modal.classList.remove('flex');
       currentQuestion = null;
     }
+
     function updateScore() {
       const scoreEl1 = document.getElementById('score-team1');
       const scoreEl2 = document.getElementById('score-team2');
+      
       scoreEl1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
       scoreEl1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
+      
       scoreEl2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
       scoreEl2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
     }
+
     function showGameOver() {
       const finalScore1 = document.getElementById('final-score-team1');
       const finalScore2 = document.getElementById('final-score-team2');
       const winnerText = document.getElementById('winner-text');
+      
       finalScore1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
       finalScore1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
+      
       finalScore2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
       finalScore2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
+      
       if (scoreTeam1 > scoreTeam2) {
         winnerText.textContent = '🏆 TEAM 1 WINS! 🏆';
       } else if (scoreTeam2 > scoreTeam1) {
@@ -496,10 +546,12 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
       } else {
         winnerText.textContent = "IT'S A TIE!";
       }
+      
       const modal = document.getElementById('game-over-modal');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
     }
+
     document.getElementById('reveal-btn').onclick = revealAnswer;
     document.getElementById('team1-correct-btn').onclick = () => handleAnswer(1, true);
     document.getElementById('team2-correct-btn').onclick = () => handleAnswer(2, true);
@@ -519,9 +571,11 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
     document.getElementById('team2-fj-correct').onclick = () => handleFinalRound(2, true);
     document.getElementById('team2-fj-wrong').onclick = () => handleFinalRound(2, false);
     document.getElementById('fj-close-btn').onclick = closeFinalRound;
+
     document.getElementById('modal').onclick = (e) => {
       if (e.target.id === 'modal') { closeModal(); }
     };
+
     async function startApp() {
       const success = await loadQuestions();
       if (success) {
@@ -529,6 +583,7 @@ const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
         initGame();
       }
     }
+    
     startApp();
   </script>
 </body>
