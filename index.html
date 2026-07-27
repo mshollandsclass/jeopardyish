@@ -159,7 +159,7 @@
   </div>
 
   <script>
-    // Configuration
+    // Configuration - REPLACE THESE WITH YOUR REAL VALUES
     const CONFIG = {
       SUPABASE_URL: 'https://zzojvscgtuezmfnrvdhd.supabase.co',
       SUPABASE_KEY: 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F',
@@ -170,14 +170,18 @@
     let currentEmail = null;
     let csvData = [];
 
-    // Check for saved session
+    // Check for saved session - uses sessionStorage (not localStorage) for security
     window.onload = function() {
-      const saved = localStorage.getItem('jeopardy_license');
+      const saved = sessionStorage.getItem('jeopardy_license');
       if (saved) {
-        const data = JSON.parse(saved);
-        currentLicense = data.license;
-        currentEmail = data.email;
-        showDashboard();
+        try {
+          const data = JSON.parse(saved);
+          currentLicense = data.license;
+          currentEmail = data.email;
+          showDashboard();
+        } catch (e) {
+          sessionStorage.removeItem('jeopardy_license');
+        }
       }
     };
 
@@ -215,8 +219,8 @@
           // Save to Supabase
           await saveLicense(licenseKey, currentEmail);
           
-          // Save to localStorage
-          localStorage.setItem('jeopardy_license', JSON.stringify({
+          // Save to sessionStorage (NOT localStorage) - key disappears when browser closes
+          sessionStorage.setItem('jeopardy_license', JSON.stringify({
             license: licenseKey,
             email: currentEmail
           }));
@@ -264,7 +268,7 @@
 
     // Logout
     function logout() {
-      localStorage.removeItem('jeopardy_license');
+      sessionStorage.removeItem('jeopardy_license');
       currentLicense = null;
       currentEmail = null;
       document.getElementById('login-screen').classList.remove('hidden');
@@ -291,7 +295,7 @@
 
       try {
         const response = await fetch(
-          `${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${currentLicense}&order=round,category,value`,
+          `${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(currentLicense)}&order=round,category,value`,
           {
             headers: {
               'apikey': CONFIG.SUPABASE_KEY,
@@ -314,23 +318,51 @@
           grouped[key].push(q);
         });
 
-        let html = '';
+        // SECURITY FIX: Use safe DOM creation instead of innerHTML
+        list.innerHTML = '';
         Object.keys(grouped).sort().forEach(key => {
-          html += `<div class="border rounded-lg p-3 mb-2">
-            <h3 class="font-medium text-gray-700">${key}</h3>
-            <div class="mt-2 space-y-1">`;
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'border rounded-lg p-3 mb-2';
+          
+          const header = document.createElement('h3');
+          header.className = 'font-medium text-gray-700';
+          header.textContent = key;
+          groupDiv.appendChild(header);
+          
+          const itemsDiv = document.createElement('div');
+          itemsDiv.className = 'mt-2 space-y-1';
+          
           grouped[key].forEach(q => {
-            html += `<div class="flex justify-between items-start text-sm bg-gray-50 p-2 rounded">
-              <div class="flex-1">
-                <span class="text-blue-600 font-medium">$${q.value}:</span> ${q.question.substring(0, 80)}${q.question.length > 80 ? '...' : ''}
-              </div>
-              <button onclick="deleteQuestion(${q.id})" class="text-red-500 hover:text-red-700 ml-2">×</button>
-            </div>`;
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'flex justify-between items-start text-sm bg-gray-50 p-2 rounded';
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'flex-1';
+            
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'text-blue-600 font-medium';
+            valueSpan.textContent = `$${q.value}: `;
+            
+            const questionText = document.createTextNode(
+              q.question.substring(0, 80) + (q.question.length > 80 ? '...' : '')
+            );
+            
+            textDiv.appendChild(valueSpan);
+            textDiv.appendChild(questionText);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'text-red-500 hover:text-red-700 ml-2';
+            deleteBtn.textContent = '×';
+            deleteBtn.onclick = () => deleteQuestion(q.id);
+            
+            itemDiv.appendChild(textDiv);
+            itemDiv.appendChild(deleteBtn);
+            itemsDiv.appendChild(itemDiv);
           });
-          html += '</div></div>';
+          
+          groupDiv.appendChild(itemsDiv);
+          list.appendChild(groupDiv);
         });
-
-        list.innerHTML = html;
       } catch (err) {
         console.error(err);
         list.innerHTML = '<p class="text-red-500">Error loading questions.</p>';
@@ -376,7 +408,6 @@
           msg.className = 'text-center text-green-600';
           msg.classList.remove('hidden');
           
-          // Clear form
           document.getElementById('add-category').value = '';
           document.getElementById('add-question').value = '';
           document.getElementById('add-answer').value = '';
@@ -393,18 +424,21 @@
       }
     }
 
-    // Delete a question
+    // Delete a question - SECURITY FIX: includes license_key filter
     async function deleteQuestion(id) {
       if (!confirm('Delete this question?')) return;
 
       try {
-        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?id=eq.${id}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': CONFIG.SUPABASE_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`
+        await fetch(
+          `${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?id=eq.${encodeURIComponent(id)}&license_key=eq.${encodeURIComponent(currentLicense)}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': CONFIG.SUPABASE_KEY,
+              'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`
+            }
           }
-        });
+        );
         loadQuestions();
       } catch (err) {
         console.error(err);
@@ -456,7 +490,6 @@
           }
         }
 
-        // Show preview
         const preview = document.getElementById('csv-preview');
         const content = document.getElementById('csv-preview-content');
         preview.classList.remove('hidden');
@@ -545,10 +578,10 @@
       }
     }
 
-    // Launch game
+    // Launch game - SECURITY FIX: passes license via sessionStorage instead of URL
     function launchGame() {
-      // Open game in new tab with license parameter
-      window.open(`jeopardyish.html?license=${currentLicense}`, '_blank');
+      sessionStorage.setItem('jeopardy_game_license', currentLicense);
+      window.open('jeopardyish.html', '_blank');
     }
   </script>
 
