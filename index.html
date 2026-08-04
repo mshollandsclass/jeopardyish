@@ -25,6 +25,7 @@
     .btn-refresh { color: #2563eb; background: none; border: none; cursor: pointer; font-size: 0.875rem; text-decoration: underline; }
   </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body class="bg-gray-100 min-h-screen">
 
@@ -159,8 +160,8 @@
 
   <script>
     const CONFIG = {
-      SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co'
-SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F'
+ SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
+SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
       VERIFY_URL: 'https://centerstaged.io/api/jeopardyish.php'
     };
 
@@ -188,33 +189,81 @@ SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F'
       const error = document.getElementById('login-error');
       if (!licenseKey) { error.textContent = 'Please enter a license key'; error.classList.remove('hidden'); return; }
       btn.textContent = 'Verifying...'; btn.disabled = true; error.classList.add('hidden');
+
       try {
+        console.log('[VERIFY] Sending request to:', CONFIG.VERIFY_URL);
+        console.log('[VERIFY] License key:', licenseKey.substring(0, 4) + '****');
+
         const response = await fetch(CONFIG.VERIFY_URL, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ license_key: licenseKey })
         });
-        const data = await response.json();
-        if (data.success) {
-          currentLicense = licenseKey; currentEmail = data.purchase.email;
-          await saveLicense(licenseKey, currentEmail);
+
+        console.log('[VERIFY] Response status:', response.status);
+
+        const responseText = await response.text();
+        console.log('[VERIFY] Raw response:', responseText);
+
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseErr) {
+          console.error('[VERIFY] JSON parse error:', parseErr);
+          error.textContent = 'Server returned invalid response. Check console (F12) for details.';
+          error.classList.remove('hidden');
+          btn.textContent = 'Verify License'; btn.disabled = false;
+          return;
+        }
+
+        console.log('[VERIFY] Parsed data:', data);
+
+        if (data.success === true) {
+          // Defensive: handle various response shapes
+          currentLicense = licenseKey;
+          currentEmail = (data.purchase && data.purchase.email) ? data.purchase.email : (data.email || 'Unknown');
+
+          console.log('[VERIFY] Success! Email:', currentEmail);
+
+          // Try to save license to Supabase, but don't block login if it fails
+          try {
+            await saveLicense(licenseKey, currentEmail);
+          } catch (saveErr) {
+            console.warn('[VERIFY] saveLicense failed (non-critical):', saveErr);
+          }
+
           sessionStorage.setItem('jeopardy_license', JSON.stringify({ license: licenseKey, email: currentEmail }));
           showDashboard();
         } else {
-          error.textContent = 'Invalid license key. Please check and try again.'; error.classList.remove('hidden');
+          const reason = data.message || data.error || 'Invalid license key. Please check and try again.';
+          console.log('[VERIFY] Server rejected:', reason);
+          error.textContent = reason;
+          error.classList.remove('hidden');
         }
       } catch (err) {
-        console.error(err); error.textContent = 'Error verifying license. Please try again.'; error.classList.remove('hidden');
+        console.error('[VERIFY] Network/fetch error:', err);
+        error.textContent = 'Network error. Check your connection and that the verify URL is correct.';
+        error.classList.remove('hidden');
       }
       btn.textContent = 'Verify License'; btn.disabled = false;
     }
 
     async function saveLicense(licenseKey, email) {
       try {
-        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_licenses`, {
+        const resp = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_licenses`, {
           method: 'POST',
-          headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+          headers: { 
+            'apikey': CONFIG.SUPABASE_KEY, 
+            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`, 
+            'Content-Type': 'application/json', 
+            'Prefer': 'resolution=merge-duplicates' 
+          },
           body: JSON.stringify({ license_key: licenseKey, email: email })
         });
+        if (!resp.ok) {
+          const txt = await resp.text();
+          console.warn('[SAVE LICENSE] Supabase returned', resp.status, txt);
+        }
       } catch (err) { console.error('Error saving license:', err); }
     }
 
