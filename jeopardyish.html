@@ -7,8 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
   <script>
-    const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
+  const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
   </script>
   <style>
     body { box-sizing: border-box; }
@@ -42,14 +42,10 @@
       background: linear-gradient(145deg, #1e3a8a, #1e40af);
       border: 3px solid #1e3a8a;
       box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
-      min-height: 100px;
+      min-height: 80px;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-      word-break: break-word;
-      line-height: 1.15;
-      hyphens: auto;
     }
     .category-header.empty {
       background: linear-gradient(145deg, #1e293b, #0f172a);
@@ -93,7 +89,6 @@
       transform: translateY(-2px);
     }
   </style>
-<base target="_blank">
 <base target="_blank">
 </head>
 <body class="h-full bg-slate-900 overflow-auto">
@@ -148,7 +143,9 @@
             <button id="team1-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Team 1 Wrong</button>
             <button id="team2-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Team 2 Wrong</button>
           </div>
-
+          <div class="mt-6">
+            <button id="no-answer-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg text-lg transition-all">No One Answered</button>
+          </div>
         </div>
       </div>
     </div>
@@ -283,17 +280,17 @@
         const r2CatNames = Object.create(null);
         questions.forEach(q => {
           const catKey = q.category.toLowerCase().replace(/[^a-z0-9]/g, '_');
-          if (parseInt(q.round) === 1) {
+          if (q.round === 1) {
             if (!r1[catKey]) r1[catKey] = [];
             r1[catKey].push({ q: q.question, a: q.answer, value: q.value });
             r1Cats.add(catKey);
             r1CatNames[catKey] = q.category;
-          } else if (parseInt(q.round) === 2) {
+          } else if (q.round === 2) {
             if (!r2[catKey]) r2[catKey] = [];
             r2[catKey].push({ q: q.question, a: q.answer, value: q.value });
             r2Cats.add(catKey);
             r2CatNames[catKey] = q.category;
-          } else if (parseInt(q.round) === 3) {
+          } else if (q.round === 3) {
             finalRoundData = { question: q.question, answer: q.answer };
           }
         });
@@ -454,11 +451,9 @@
     const MAX_CATEGORIES = 6;
     const EXPECTED_ROWS = 5;
     // Round 1: $100-$500. Round 2: $200-$1000. Each row is a fixed value.
-    function getExpectedValues(round) {
-      return round === 1
-        ? [100, 200, 300, 400, 500]
-        : [200, 400, 600, 800, 1000];
-    }
+    const EXPECTED_VALUES = currentRound === 1
+      ? [100, 200, 300, 400, 500]
+      : [200, 400, 600, 800, 1000];
 
     function renderBoard() {
       const board = document.getElementById('game-board');
@@ -492,9 +487,9 @@
       for (let i = 0; i < MAX_CATEGORIES; i++) {
         const catDiv = document.createElement('div');
         if (paddedCategories[i]) {
-          catDiv.className = 'category-header rounded-lg category-font text-center text-white text-sm md:text-lg lg:text-2xl p-2 font-bold';
+          catDiv.className = 'category-header rounded-lg category-font text-center text-white text-xs md:text-sm lg:text-base p-2 font-bold';
         } else {
-          catDiv.className = 'category-header empty rounded-lg category-font text-center text-white text-sm md:text-lg lg:text-2xl p-2 font-bold';
+          catDiv.className = 'category-header empty rounded-lg category-font text-center text-white text-xs md:text-sm lg:text-base p-2 font-bold';
         }
         catDiv.textContent = paddedLabels[i];
         board.appendChild(catDiv);
@@ -522,7 +517,7 @@
             card.textContent = '';
           } else {
             const catQuestions = questions[cat] || [];
-            const expectedValue = getExpectedValues(currentRound)[row];
+            const expectedValue = EXPECTED_VALUES[row];
             // Look up question by matching the expected value (not by row index)
             const question = catQuestions.find(q => q.value === expectedValue);
             if (question) {
@@ -594,7 +589,10 @@
       closeModal();
     }
 
-
+    function handleNoAnswer() {
+      // FIX: "No One Answered" keeps the card on the board for another try
+      closeModal();
+    }
 
     function markCardUsed() {
       if (currentQuestion) {
@@ -655,7 +653,7 @@
     document.getElementById('team2-correct-btn').onclick = () => handleAnswer(2, true);
     document.getElementById('team1-wrong-btn').onclick = () => handleAnswer(1, false);
     document.getElementById('team2-wrong-btn').onclick = () => handleAnswer(2, false);
-    
+    document.getElementById('no-answer-btn').onclick = handleNoAnswer;
     document.getElementById('play-again-btn').onclick = initGame;
     document.getElementById('round1-btn').onclick = () => switchRound(1);
     document.getElementById('round2-btn').onclick = () => switchRound(2);
