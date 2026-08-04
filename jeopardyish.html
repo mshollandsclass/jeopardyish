@@ -147,9 +147,7 @@
             <button id="team1-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Team 1 Wrong</button>
             <button id="team2-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Team 2 Wrong</button>
           </div>
-          <div class="mt-6">
-            <button id="no-answer-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg text-lg transition-all">No One Answered</button>
-          </div>
+
         </div>
       </div>
     </div>
@@ -593,10 +591,7 @@
       closeModal();
     }
 
-    function handleNoAnswer() {
-      // FIX: "No One Answered" keeps the card on the board for another try
-      closeModal();
-    }
+
 
     function markCardUsed() {
       if (currentQuestion) {
@@ -657,7 +652,7 @@
     document.getElementById('team2-correct-btn').onclick = () => handleAnswer(2, true);
     document.getElementById('team1-wrong-btn').onclick = () => handleAnswer(1, false);
     document.getElementById('team2-wrong-btn').onclick = () => handleAnswer(2, false);
-    document.getElementById('no-answer-btn').onclick = handleNoAnswer;
+    
     document.getElementById('play-again-btn').onclick = initGame;
     document.getElementById('round1-btn').onclick = () => switchRound(1);
     document.getElementById('round2-btn').onclick = () => switchRound(2);
