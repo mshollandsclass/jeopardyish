@@ -1,684 +1,519 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jeopardyish Game</title>
+  <title>Jeopardyish Dashboard - CenterStaged</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
-  <script>
-  const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { box-sizing: border-box; }
-    .game-font { font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif; letter-spacing: 2px; }
-    .category-font { font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-    .money-font { font-family: 'Bebas Neue', 'Oswald', Impact, sans-serif; color: #D4AF37; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
-    .card {
-      background: linear-gradient(145deg, #1e3a8a, #1e40af);
-      border: 3px solid #1e3a8a;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.3);
-      transition: all 0.3s ease;
-      min-height: 80px;
-    }
-    .card:hover:not(.used):not(.empty) {
-      transform: scale(1.05);
-      box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
-      border-color: #D4AF37;
-    }
-    .card.used {
-      background: linear-gradient(145deg, #0f172a, #1e293b);
-      opacity: 0.4;
-      cursor: default;
-    }
-    .card.empty {
-      background: linear-gradient(145deg, #1e293b, #0f172a);
-      opacity: 0.25;
-      cursor: default;
-      border-color: #334155;
-    }
-    .category-header {
-      background: linear-gradient(145deg, #1e3a8a, #1e40af);
-      border: 3px solid #1e3a8a;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
-      min-height: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      word-break: break-word;
-      line-height: 1.15;
-      hyphens: auto;
-    }
-    .category-header.empty {
-      background: linear-gradient(145deg, #1e293b, #0f172a);
-      border-color: #334155;
-      opacity: 0.4;
-    }
-    .question-modal {
-      background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
-      border: 4px solid #D4AF37;
-      box-shadow: 0 0 60px rgba(212, 175, 55, 0.3);
-    }
-    @keyframes slideIn {
-      from { transform: scale(0.8); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    @keyframes pulse {
-      0%, 100% { text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
-      50% { text-shadow: 0 0 30px rgba(212, 175, 55, 0.8); }
-    }
-    .animate-modal {
-      animation: slideIn 0.3s ease-out;
-    }
-    .score-display {
-      animation: pulse 2s infinite;
-    }
-    .btn-answer {
-      background: linear-gradient(145deg, #15803d, #166534);
-      border: 2px solid #22c55e;
-      transition: all 0.2s ease;
-    }
-    .btn-answer:hover {
-      background: linear-gradient(145deg, #16a34a, #15803d);
-      transform: translateY(-2px);
-    }
-    .btn-wrong {
-      background: linear-gradient(145deg, #b91c1c, #991b1b);
-      border: 2px solid #ef4444;
-    }
-    .btn-wrong:hover {
-      background: linear-gradient(145deg, #dc2626, #b91c1c);
-      transform: translateY(-2px);
-    }
+    body { font-family: 'Inter', sans-serif; }
+    .category-group { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem; background: #fff; }
+    .category-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .category-title { font-weight: 600; color: #1f2937; font-size: 1rem; }
+    .delete-cat-btn { font-size: 0.75rem; background: #fee2e2; color: #dc2626; padding: 0.25rem 0.5rem; border-radius: 0.375rem; border: none; cursor: pointer; }
+    .delete-cat-btn:hover { background: #fecaca; }
+    .question-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.875rem; background: #f9fafb; padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.25rem; }
+    .question-text { flex: 1; }
+    .value-tag { color: #2563eb; font-weight: 500; }
+    .delete-x { color: #ef4444; background: none; border: none; cursor: pointer; font-size: 1.125rem; line-height: 1; margin-left: 0.5rem; }
+    .delete-x:hover { color: #b91c1c; }
+    .round-header { font-size: 1.125rem; font-weight: 700; color: #1e40af; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 2px solid #dbeafe; padding-bottom: 0.25rem; }
+    .top-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn-clear { background: #fee2e2; color: #991b1b; font-weight: 600; padding: 0.375rem 0.875rem; border-radius: 0.5rem; border: 1px solid #fecaca; cursor: pointer; font-size: 0.875rem; }
+    .btn-clear:hover { background: #fecaca; }
+    .btn-refresh { color: #2563eb; background: none; border: none; cursor: pointer; font-size: 0.875rem; text-decoration: underline; }
   </style>
 <base target="_blank">
 </head>
-<body class="h-full bg-slate-900 overflow-auto">
-  <div id="loading-screen" class="h-full flex items-center justify-center">
-    <div class="text-center">
-      <h1 class="game-font text-4xl text-yellow-400 mb-4">Loading Game...</h1>
-      <p id="loading-message" class="text-blue-300">Fetching your questions</p>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Jeopardyish Game Dashboard</h1>
+        <p class="text-gray-600">Enter your Gumroad license key to access</p>
+      </div>
+      <div class="space-y-4">
+        <input type="text" id="license-input" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center font-mono">
+        <button onclick="verifyLicense()" id="verify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">Verify License</button>
+        <p id="login-error" class="text-red-500 text-center hidden"></p>
+      </div>
+      <div class="mt-6 text-center text-sm text-gray-500">
+        <p>Don't have a license? <a href="https://gumroad.com/l/uibvml" target="_blank" class="text-blue-600 hover:underline">Purchase here</a></p>
+      </div>
     </div>
   </div>
-  <div id="error-screen" class="hidden h-full flex items-center justify-center">
-    <div class="text-center max-w-md p-8">
-      <h1 class="game-font text-4xl text-red-400 mb-4">Error</h1>
-      <p id="error-message" class="text-white mb-6">No questions found.</p>
-      <a href="index.html" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-6 rounded-lg">Back to Dashboard</a>
-    </div>
-  </div>
-  <div id="app" class="hidden h-full w-full flex flex-col">
-    <header class="py-4 px-6 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b-4 border-yellow-500">
-      <div class="flex flex-col md:flex-row justify-between items-center gap-4 max-w-7xl mx-auto">
-        <h1 id="game-title" class="game-font text-4xl md:text-5xl text-yellow-400 tracking-wider">JEOPARDYISH!</h1>
-        <div class="flex items-center gap-3">
-          <button id="round1-btn" class="bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105">Round 1</button>
-          <button id="round2-btn" class="bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600">Round 2</button>
-          <button id="final-btn" class="bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600">Final Round</button>
-        </div>
-        <div class="flex flex-col md:flex-row items-center gap-4">
-          <div class="flex items-center gap-2"><span class="text-yellow-400 text-lg font-bold">Team 1:</span><span id="score-team1" class="money-font text-2xl md:text-3xl score-display">$0</span></div>
-          <div class="flex items-center gap-2"><span class="text-yellow-400 text-lg font-bold">Team 2:</span><span id="score-team2" class="money-font text-2xl md:text-3xl score-display">$0</span></div>
+
+  <!-- Dashboard Screen -->
+  <div id="dashboard-screen" class="hidden">
+    <header class="bg-white shadow">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-gray-800">Jeopardyish Dashboard</h1>
+        <div class="flex items-center gap-4">
+          <span id="user-email" class="text-sm text-gray-600"></span>
+          <button onclick="logout()" class="text-sm text-red-600 hover:underline">Logout</button>
         </div>
       </div>
     </header>
-    <main class="flex-1 p-4 md:p-6 overflow-auto">
-      <div class="max-w-7xl mx-auto h-full">
-        <div id="game-board" class="grid gap-2 md:gap-3 h-full min-h-96"></div>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+      <!-- Tabs -->
+      <div class="flex gap-4 mb-6">
+        <button onclick="showTab('questions')" id="tab-questions" class="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white">My Questions</button>
+        <button onclick="showTab('add')" id="tab-add" class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Add Questions</button>
+        <button onclick="showTab('upload')" id="tab-upload" class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Upload CSV</button>
+        <button onclick="showTab('play')" id="tab-play" class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Play Game</button>
+      </div>
+
+      <!-- My Questions Tab -->
+      <div id="panel-questions" class="bg-white rounded-xl shadow p-6">
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <h2 class="text-lg font-semibold">Your Questions</h2>
+          <div class="top-actions">
+            <button onclick="loadQuestions()" class="btn-refresh">Refresh</button>
+            <button onclick="clearAllQuestions()" class="btn-clear">Clear All Questions</button>
+          </div>
+        </div>
+        <div id="questions-list">
+          <p class="text-gray-500">Loading questions...</p>
+        </div>
+      </div>
+
+      <!-- Add Questions Tab -->
+      <div id="panel-add" class="bg-white rounded-xl shadow p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Add a Question</h2>
+        <div class="grid gap-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Round</label>
+              <select id="add-round" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="1">Round 1 ($100-$500)</option>
+                <option value="2">Round 2 ($200-$1000)</option>
+                <option value="3">Final Round</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Point Value</label>
+              <select id="add-value" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="100">100</option>
+                <option value="200">200</option>
+                <option value="300">300</option>
+                <option value="400">400</option>
+                <option value="500">500</option>
+                <option value="600">600</option>
+                <option value="800">800</option>
+                <option value="1000">1000</option>
+                <option value="0">0 (Final Round)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <input type="text" id="add-category" placeholder="e.g. SCIENCE" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Question</label>
+            <textarea id="add-question" rows="2" placeholder="Enter your question..." class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Answer</label>
+            <input type="text" id="add-answer" placeholder="What is...?" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          <button onclick="addQuestion()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors">Add Question</button>
+          <p id="add-message" class="text-center hidden"></p>
+        </div>
+      </div>
+
+      <!-- Upload CSV Tab -->
+      <div id="panel-upload" class="bg-white rounded-xl shadow p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Upload Questions from CSV</h2>
+        <div class="space-y-4">
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSV(event)">
+            <button onclick="document.getElementById('csv-file').click()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">Choose CSV File</button>
+            <p class="text-gray-500 mt-2">or drag and drop</p>
+          </div>
+          <div>
+            <button onclick="downloadTemplate()" class="text-blue-600 hover:underline text-sm">Download CSV Template</button>
+          </div>
+          <div id="csv-preview" class="hidden">
+            <h3 class="font-medium mb-2">Preview:</h3>
+            <div id="csv-preview-content" class="bg-gray-50 rounded p-4 overflow-auto max-h-64 text-sm"></div>
+            <button onclick="uploadCSV()" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg">Upload All Questions</button>
+          </div>
+          <p id="upload-message" class="text-center hidden"></p>
+        </div>
+      </div>
+
+      <!-- Play Game Tab -->
+      <div id="panel-play" class="bg-white rounded-xl shadow p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Play Your Game</h2>
+        <p class="text-gray-600 mb-4">Launch the Jeopardy game with your custom questions.</p>
+        <button onclick="launchGame()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg">Launch Game</button>
+        <p class="text-sm text-gray-500 mt-4">Make sure you have at least 30 questions (6 categories x 5 questions) for Round 1, and 30 for Round 2.</p>
       </div>
     </main>
-    <div id="modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
-      <div class="question-modal animate-modal rounded-lg p-6 md:p-10 max-w-3xl w-full text-center">
-        <div id="modal-value" class="money-font text-4xl md:text-5xl mb-6"></div>
-        <p id="modal-question" class="text-white text-3xl md:text-5xl mb-8 leading-relaxed category-font"></p>
-        <div id="answer-section" class="mb-6">
-          <button id="reveal-btn" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-lg text-xl transition-all transform hover:scale-105">Reveal Answer</button>
-        </div>
-        <div id="result-section" class="hidden">
-          <p id="modal-answer" class="text-yellow-400 text-2xl md:text-4xl mb-6 font-bold"></p>
-          <p class="text-white text-xl mb-4">Which team answered?</p>
-          <div class="flex gap-4 justify-center flex-wrap mb-6">
-            <button id="team1-correct-btn" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">&#10003; Team 1 Correct</button>
-            <button id="team2-correct-btn" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">&#10003; Team 2 Correct</button>
-          </div>
-          <div class="flex gap-4 justify-center flex-wrap">
-            <button id="team1-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Team 1 Wrong</button>
-            <button id="team2-wrong-btn" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Team 2 Wrong</button>
-          </div>
-
-        </div>
-      </div>
-    </div>
-    <div id="final-modal" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-50">
-      <div class="question-modal animate-modal rounded-lg p-10 max-w-4xl w-full text-center">
-        <h2 class="game-font text-6xl text-yellow-400 mb-8">FINAL ROUND!</h2>
-        <div id="fj-question-section">
-          <p id="final-question-text" class="text-white text-4xl md:text-5xl mb-12 leading-relaxed font-bold">Martel Stone holds this three-word position at Dogon Restaurant in Washington, DC.</p>
-          <button id="fj-proceed-btn" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105">Ready for Wagers</button>
-        </div>
-        <div id="fj-wager-section" class="hidden">
-          <p id="final-question-text-2" class="text-white text-4xl md:text-5xl mb-12 leading-relaxed font-bold">Martel Stone holds this three-word position at Dogon Restaurant in Washington, DC.</p>
-          <p class="text-yellow-400 text-3xl mb-8 mt-8">Teams, enter your wagers!</p>
-          <div class="space-y-6">
-            <div class="bg-blue-900/50 p-6 rounded-lg">
-              <p class="text-yellow-400 text-2xl mb-4">Team 1 - Enter Wager Amount:</p>
-              <input type="number" id="team1-wager" min="0" max="99999" placeholder="0" class="w-48 px-4 py-3 text-2xl text-center bg-slate-800 text-white border-2 border-yellow-500 rounded-lg mb-4">
-              <button id="team1-fj-submit" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105">Submit Wager</button>
-              <p id="team1-submitted" class="hidden text-green-400 text-lg mt-2">&#10003; Wager Submitted</p>
-            </div>
-            <div class="bg-blue-900/50 p-6 rounded-lg">
-              <p class="text-yellow-400 text-2xl mb-4">Team 2 - Enter Wager Amount:</p>
-              <input type="number" id="team2-wager" min="0" max="99999" placeholder="0" class="w-48 px-4 py-3 text-2xl text-center bg-slate-800 text-white border-2 border-yellow-500 rounded-lg mb-4">
-              <button id="team2-fj-submit" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105">Submit Wager</button>
-              <p id="team2-submitted" class="hidden text-green-400 text-lg mt-2">&#10003; Wager Submitted</p>
-            </div>
-          </div>
-          <button id="fj-reveal-answer-btn" class="mt-8 bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105" disabled>Reveal Answer (Both Teams Must Wager)</button>
-        </div>
-        <div id="fj-answer-section" class="hidden">
-          <p id="final-answer-text" class="text-yellow-400 text-5xl mb-12 font-bold">Chef de Cuisine</p>
-          <div class="space-y-6">
-            <div class="bg-blue-900/50 p-6 rounded-lg">
-              <p class="text-yellow-400 text-2xl mb-2">Team 1</p>
-              <p class="text-white text-xl mb-4">Wagered: <span id="team1-wager-display" class="money-font text-2xl"></span></p>
-              <div class="flex gap-4 justify-center">
-                <button id="team1-fj-correct" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">&#10003; Correct</button>
-                <button id="team1-fj-wrong" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Wrong</button>
-              </div>
-            </div>
-            <div class="bg-blue-900/50 p-6 rounded-lg">
-              <p class="text-yellow-400 text-2xl mb-2">Team 2</p>
-              <p class="text-white text-xl mb-4">Wagered: <span id="team2-wager-display" class="money-font text-2xl"></span></p>
-              <div class="flex gap-4 justify-center">
-                <button id="team2-fj-correct" class="btn-answer text-white font-bold py-3 px-8 rounded-lg text-lg">&#10003; Correct</button>
-                <button id="team2-fj-wrong" class="btn-wrong text-white font-bold py-3 px-8 rounded-lg text-lg">&#10007; Wrong</button>
-              </div>
-            </div>
-          </div>
-          <button id="fj-close-btn" class="mt-8 bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105">Show Final Scores &amp; Winner</button>
-        </div>
-      </div>
-    </div>
-    <div id="game-over-modal" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-50">
-      <div class="question-modal animate-modal rounded-lg p-10 max-w-lg w-full text-center">
-        <h2 class="game-font text-5xl text-yellow-400 mb-6">GAME OVER!</h2>
-        <p class="text-white text-2xl mb-4">Final Scores</p>
-        <div class="mb-4"><p class="text-yellow-400 text-xl mb-2">Team 1</p><p id="final-score-team1" class="money-font text-5xl mb-4"></p></div>
-        <div class="mb-8"><p class="text-yellow-400 text-xl mb-2">Team 2</p><p id="final-score-team2" class="money-font text-5xl"></p></div>
-        <p id="winner-text" class="text-yellow-400 text-3xl mb-8 game-font"></p>
-        <button id="play-again-btn" class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-10 rounded-lg text-xl transition-all transform hover:scale-105">Play Again</button>
-      </div>
-    </div>
   </div>
+
   <script>
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    function playCorrectSound() {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
-      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.4);
-    }
-    function playIncorrectSound() {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.type = 'sawtooth';
-      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-    }
-    let round1Questions = {};
-    let round2Questions = {};
-    let finalRoundData = { question: '', answer: '' };
-    let round1Categories = [];
-    let round2Categories = [];
-    let categoryNames = { round1: [], round2: [] };
-
-    function getLicenseKey() {
-      const fromStorage = sessionStorage.getItem('jeopardy_game_license');
-      if (fromStorage) return fromStorage;
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('license');
-    }
-
-    async function loadQuestions() {
-      const licenseKey = getLicenseKey();
-      if (!licenseKey) {
-        showError('No license key provided. Please launch the game from your dashboard.');
-        return false;
-      }
-      try {
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(licenseKey)}&order=round,category,value`,
-          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-        );
-        if (!response.ok) {
-          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-        }
-        const questions = await response.json();
-        if (!questions || questions.length === 0) {
-          showError('No questions found for this license. Please add questions in your dashboard first.');
-          return false;
-        }
-        const r1 = Object.create(null);
-        const r2 = Object.create(null);
-        const r1Cats = new Set();
-        const r2Cats = new Set();
-        const r1CatNames = Object.create(null);
-        const r2CatNames = Object.create(null);
-        questions.forEach(q => {
-          const catKey = q.category.toLowerCase().replace(/[^a-z0-9]/g, '_');
-          if (q.round === 1) {
-            if (!r1[catKey]) r1[catKey] = [];
-            r1[catKey].push({ q: q.question, a: q.answer, value: q.value });
-            r1Cats.add(catKey);
-            r1CatNames[catKey] = q.category;
-          } else if (q.round === 2) {
-            if (!r2[catKey]) r2[catKey] = [];
-            r2[catKey].push({ q: q.question, a: q.answer, value: q.value });
-            r2Cats.add(catKey);
-            r2CatNames[catKey] = q.category;
-          } else if (q.round === 3) {
-            finalRoundData = { question: q.question, answer: q.answer };
-          }
-        });
-        Object.keys(r1).forEach(cat => r1[cat].sort((a, b) => a.value - b.value));
-        Object.keys(r2).forEach(cat => r2[cat].sort((a, b) => a.value - b.value));
-        round1Questions = r1;
-        round2Questions = r2;
-        round1Categories = Array.from(r1Cats);
-        round2Categories = Array.from(r2Cats);
-        categoryNames = {
-          round1: round1Categories.map(c => r1CatNames[c]),
-          round2: round2Categories.map(c => r2CatNames[c])
-        };
-        return true;
-      } catch (err) {
-        console.error('Error loading questions:', err);
-        showError('Error loading questions. Please try again.');
-        return false;
-      }
-    }
-
-    function showError(message) {
-      document.getElementById('loading-screen').classList.add('hidden');
-      document.getElementById('error-screen').classList.remove('hidden');
-      document.getElementById('error-message').textContent = message;
-    }
-    function showGame() {
-      document.getElementById('loading-screen').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
-    }
-
-    let currentRound = 1;
-    let questions = round1Questions;
-    let categories = round1Categories;
-    let scoreTeam1 = 0;
-    let scoreTeam2 = 0;
-    let usedCards = { round1: new Set(), round2: new Set() };
-    let currentQuestion = null;
-    let team1FJAnswered = false;
-    let team2FJAnswered = false;
-    let team1FJWagered = false;
-    let team2FJWagered = false;
-    let team1Wager = 0;
-    let team2Wager = 0;
-
-    function switchRound(round) {
-      currentRound = round;
-      if (round === 1) {
-        questions = round1Questions;
-        categories = round1Categories;
-        document.getElementById('round1-btn').className = "bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105";
-        document.getElementById('round2-btn').className = "bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600";
-        document.getElementById('final-btn').className = "bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600";
-      } else {
-        questions = round2Questions;
-        categories = round2Categories;
-        document.getElementById('round1-btn').className = "bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600";
-        document.getElementById('round2-btn').className = "bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105";
-        document.getElementById('final-btn').className = "bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600";
-      }
-      renderBoard();
-    }
-
-    function showFinalRound() {
-      team1FJAnswered = false; team2FJAnswered = false; team1FJWagered = false; team2FJWagered = false; team1Wager = 0; team2Wager = 0;
-      document.getElementById('team1-wager').value = ''; document.getElementById('team2-wager').value = '';
-      document.getElementById('team1-wager').disabled = false; document.getElementById('team2-wager').disabled = false;
-      document.getElementById('fj-question-section').classList.remove('hidden');
-      document.getElementById('fj-wager-section').classList.add('hidden');
-      document.getElementById('fj-answer-section').classList.add('hidden');
-      document.getElementById('team1-submitted').classList.add('hidden');
-      document.getElementById('team2-submitted').classList.add('hidden');
-      document.getElementById('team1-fj-submit').disabled = false;
-      document.getElementById('team2-fj-submit').disabled = false;
-      document.getElementById('fj-reveal-answer-btn').disabled = true;
-      document.getElementById('final-question-text').textContent = finalRoundData.question;
-      document.getElementById('final-question-text-2').textContent = finalRoundData.question;
-      document.getElementById('final-answer-text').textContent = finalRoundData.answer;
-      const modal = document.getElementById('final-modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    function proceedToFJWagers() {
-      document.getElementById('fj-question-section').classList.add('hidden');
-      document.getElementById('fj-wager-section').classList.remove('hidden');
-    }
-
-    function submitFJWager(team) {
-      const wagerInput = document.getElementById(`team${team}-wager`);
-      const wager = parseInt(wagerInput.value) || 0;
-      if (team === 1) {
-        team1Wager = wager; team1FJWagered = true;
-        document.getElementById('team1-submitted').classList.remove('hidden');
-        document.getElementById('team1-fj-submit').disabled = true;
-        wagerInput.disabled = true;
-      } else if (team === 2) {
-        team2Wager = wager; team2FJWagered = true;
-        document.getElementById('team2-submitted').classList.remove('hidden');
-        document.getElementById('team2-fj-submit').disabled = true;
-        wagerInput.disabled = true;
-      }
-      if (team1FJWagered && team2FJWagered) {
-        document.getElementById('fj-reveal-answer-btn').disabled = false;
-      }
-    }
-
-    function revealFJAnswer() {
-      document.getElementById('fj-wager-section').classList.add('hidden');
-      document.getElementById('fj-answer-section').classList.remove('hidden');
-      document.getElementById('team1-wager-display').textContent = `$${team1Wager}`;
-      document.getElementById('team2-wager-display').textContent = `$${team2Wager}`;
-    }
-
-    function handleFinalRound(team, correct) {
-      if (correct) { playCorrectSound(); } else { playIncorrectSound(); }
-      if (team === 1 && !team1FJAnswered) {
-        if (correct) { scoreTeam1 += team1Wager; } else { scoreTeam1 -= team1Wager; }
-        team1FJAnswered = true;
-        document.getElementById('team1-fj-correct').disabled = true;
-        document.getElementById('team1-fj-wrong').disabled = true;
-      } else if (team === 2 && !team2FJAnswered) {
-        if (correct) { scoreTeam2 += team2Wager; } else { scoreTeam2 -= team2Wager; }
-        team2FJAnswered = true;
-        document.getElementById('team2-fj-correct').disabled = true;
-        document.getElementById('team2-fj-wrong').disabled = true;
-      }
-      updateScore();
-    }
-
-    function closeFinalRound() {
-      document.getElementById('final-modal').classList.add('hidden');
-      document.getElementById('final-modal').classList.remove('flex');
-      showGameOver();
-    }
-
-    function initGame() {
-      scoreTeam1 = 0; scoreTeam2 = 0;
-      usedCards = { round1: new Set(), round2: new Set() };
-      currentRound = 1;
-      questions = round1Questions;
-      categories = round1Categories;
-      team1FJAnswered = false; team2FJAnswered = false; team1FJWagered = false; team2FJWagered = false; team1Wager = 0; team2Wager = 0;
-      updateScore();
-      renderBoard();
-      document.getElementById('game-over-modal').classList.add('hidden');
-      document.getElementById('game-over-modal').classList.remove('flex');
-      document.getElementById('round1-btn').className = "bg-yellow-500 text-blue-900 font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105";
-      document.getElementById('round2-btn').className = "bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-blue-600";
-      document.getElementById('final-btn').className = "bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 hover:bg-purple-600";
-      document.getElementById('team1-fj-correct').disabled = false;
-      document.getElementById('team1-fj-wrong').disabled = false;
-      document.getElementById('team2-fj-correct').disabled = false;
-      document.getElementById('team2-fj-wrong').disabled = false;
-    }
-
-    // FIXED: Always 6 columns, fixed values per row based on round
-    const MAX_CATEGORIES = 6;
-    const EXPECTED_ROWS = 5;
-    // Round 1: $100-$500. Round 2: $200-$1000. Each row is a fixed value.
-    const EXPECTED_VALUES = currentRound === 1
-      ? [100, 200, 300, 400, 500]
-      : [200, 400, 600, 800, 1000];
-
-    function renderBoard() {
-      const board = document.getElementById('game-board');
-      board.innerHTML = '';
-
-      const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
-      const numCats = categories.length;
-
-      if (numCats === 0) {
-        board.innerHTML = '<p class="text-white text-center col-span-full">No categories found for this round.</p>';
-        return;
-      }
-
-      // Always 6 columns
-      board.style.gridTemplateColumns = `repeat(${MAX_CATEGORIES}, minmax(0, 1fr))`;
-
-      // Build padded arrays to always have 6 slots
-      const paddedCategories = [];
-      const paddedLabels = [];
-      for (let i = 0; i < MAX_CATEGORIES; i++) {
-        if (i < numCats) {
-          paddedCategories.push(categories[i]);
-          paddedLabels.push(categoryNames[currentRound === 1 ? 'round1' : 'round2'][i] || categories[i].toUpperCase());
-        } else {
-          paddedCategories.push(null);
-          paddedLabels.push('???');
-        }
-      }
-
-      // Render 6 category headers
-      for (let i = 0; i < MAX_CATEGORIES; i++) {
-        const catDiv = document.createElement('div');
-        if (paddedCategories[i]) {
-          catDiv.className = 'category-header rounded-lg category-font text-center text-white text-sm md:text-lg lg:text-2xl p-2 font-bold';
-        } else {
-          catDiv.className = 'category-header empty rounded-lg category-font text-center text-white text-sm md:text-lg lg:text-2xl p-2 font-bold';
-        }
-        catDiv.textContent = paddedLabels[i];
-        board.appendChild(catDiv);
-      }
-
-      // Render exactly 5 rows × 6 columns
-      for (let row = 0; row < EXPECTED_ROWS; row++) {
-        for (let col = 0; col < MAX_CATEGORIES; col++) {
-          const cat = paddedCategories[col];
-          const cardId = `col${col}-row${row}`;
-          const isUsed = currentUsedCards.has(cardId);
-
-          const card = document.createElement('button');
-          card.className = 'card rounded-lg flex items-center justify-center';
-          card.dataset.col = col;
-          card.dataset.row = row;
-          card.dataset.id = cardId;
-
-          if (!cat) {
-            // Empty column placeholder
-            card.classList.add('empty');
-            card.textContent = '';
-          } else if (isUsed) {
-            card.classList.add('used');
-            card.textContent = '';
-          } else {
-            const catQuestions = questions[cat] || [];
-            const expectedValue = EXPECTED_VALUES[row];
-            // Look up question by matching the expected value (not by row index)
-            const question = catQuestions.find(q => q.value === expectedValue);
-            if (question) {
-              const span = document.createElement('span');
-              span.className = 'money-font text-2xl md:text-3xl lg:text-4xl';
-              // Always show the expected row value, not the stored value
-              span.textContent = `$${expectedValue}`;
-              card.appendChild(span);
-              card.onclick = () => openQuestionByValue(cat, expectedValue);
-            } else {
-              // Missing question in this slot
-              card.classList.add('empty');
-              const span = document.createElement('span');
-              span.className = 'money-font text-xl md:text-2xl opacity-30';
-              span.textContent = `$${expectedValue}`;
-              card.appendChild(span);
-            }
-          }
-
-          board.appendChild(card);
-        }
-      }
-    }
-
-    function openQuestionByValue(category, value) {
-      const catQuestions = questions[category] || [];
-      const question = catQuestions.find(q => q.value === value);
-      if (!question) return;
-      currentQuestion = { category, value: value };
-      document.getElementById('modal-value').textContent = `$${value}`;
-      document.getElementById('modal-question').textContent = question.q;
-      document.getElementById('answer-section').classList.remove('hidden');
-      document.getElementById('result-section').classList.add('hidden');
-      const modal = document.getElementById('modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    // Legacy function for backward compatibility
-    function openQuestion(category, row) {
-      const expectedValue = (currentRound === 1 ? [100,200,300,400,500] : [200,400,600,800,1000])[row];
-      openQuestionByValue(category, expectedValue);
-    }
-
-    function revealAnswer() {
-      const catQuestions = questions[currentQuestion.category] || [];
-      const question = catQuestions.find(q => q.value === currentQuestion.value);
-      if (question) {
-        document.getElementById('modal-answer').textContent = question.a;
-      }
-      document.getElementById('answer-section').classList.add('hidden');
-      document.getElementById('result-section').classList.remove('hidden');
-    }
-
-    function handleAnswer(team, correct) {
-      if (currentQuestion) {
-        if (correct) { playCorrectSound(); } else { playIncorrectSound(); }
-        if (team === 1) {
-          if (correct) { scoreTeam1 += currentQuestion.value; } else { scoreTeam1 -= currentQuestion.value; }
-        } else if (team === 2) {
-          if (correct) { scoreTeam2 += currentQuestion.value; } else { scoreTeam2 -= currentQuestion.value; }
-        }
-        updateScore();
-        // FIX: Only mark card used on correct answer. Wrong answers keep it on the board.
-        if (correct) {
-          markCardUsed();
-        }
-      }
-      closeModal();
-    }
-
-
-
-    function markCardUsed() {
-      if (currentQuestion) {
-        const catIndex = categories.indexOf(currentQuestion.category);
-        // Find the row index based on the value
-        const expectedValues = currentRound === 1 ? [100,200,300,400,500] : [200,400,600,800,1000];
-        const rowIndex = expectedValues.indexOf(currentQuestion.value);
-        const cardId = `col${catIndex}-row${rowIndex}`;
-        const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
-        currentUsedCards.add(cardId);
-        const card = document.querySelector(`[data-id="${cardId}"]`);
-        if (card) {
-          card.classList.add('used');
-          card.innerHTML = '';
-          card.onclick = null;
-        }
-      }
-    }
-
-    function closeModal() {
-      const modal = document.getElementById('modal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      currentQuestion = null;
-    }
-
-    function updateScore() {
-      const scoreEl1 = document.getElementById('score-team1');
-      const scoreEl2 = document.getElementById('score-team2');
-      scoreEl1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
-      scoreEl1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
-      scoreEl2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
-      scoreEl2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
-    }
-
-    function showGameOver() {
-      const finalScore1 = document.getElementById('final-score-team1');
-      const finalScore2 = document.getElementById('final-score-team2');
-      const winnerText = document.getElementById('winner-text');
-      finalScore1.textContent = scoreTeam1 >= 0 ? `$${scoreTeam1}` : `-$${Math.abs(scoreTeam1)}`;
-      finalScore1.style.color = scoreTeam1 >= 0 ? '#D4AF37' : '#ef4444';
-      finalScore2.textContent = scoreTeam2 >= 0 ? `$${scoreTeam2}` : `-$${Math.abs(scoreTeam2)}`;
-      finalScore2.style.color = scoreTeam2 >= 0 ? '#D4AF37' : '#ef4444';
-      if (scoreTeam1 > scoreTeam2) {
-        winnerText.textContent = '🏆 TEAM 1 WINS! 🏆';
-      } else if (scoreTeam2 > scoreTeam1) {
-        winnerText.textContent = '🏆 TEAM 2 WINS! 🏆';
-      } else {
-        winnerText.textContent = "IT'S A TIE!";
-      }
-      const modal = document.getElementById('game-over-modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    document.getElementById('reveal-btn').onclick = revealAnswer;
-    document.getElementById('team1-correct-btn').onclick = () => handleAnswer(1, true);
-    document.getElementById('team2-correct-btn').onclick = () => handleAnswer(2, true);
-    document.getElementById('team1-wrong-btn').onclick = () => handleAnswer(1, false);
-    document.getElementById('team2-wrong-btn').onclick = () => handleAnswer(2, false);
-    
-    document.getElementById('play-again-btn').onclick = initGame;
-    document.getElementById('round1-btn').onclick = () => switchRound(1);
-    document.getElementById('round2-btn').onclick = () => switchRound(2);
-    document.getElementById('final-btn').onclick = showFinalRound;
-    document.getElementById('fj-proceed-btn').onclick = proceedToFJWagers;
-    document.getElementById('team1-fj-submit').onclick = () => submitFJWager(1);
-    document.getElementById('team2-fj-submit').onclick = () => submitFJWager(2);
-    document.getElementById('fj-reveal-answer-btn').onclick = revealFJAnswer;
-    document.getElementById('team1-fj-correct').onclick = () => handleFinalRound(1, true);
-    document.getElementById('team1-fj-wrong').onclick = () => handleFinalRound(1, false);
-    document.getElementById('team2-fj-correct').onclick = () => handleFinalRound(2, true);
-    document.getElementById('team2-fj-wrong').onclick = () => handleFinalRound(2, false);
-    document.getElementById('fj-close-btn').onclick = closeFinalRound;
-
-    document.getElementById('modal').onclick = (e) => {
-      if (e.target.id === 'modal') { closeModal(); }
+    const CONFIG = {
+     SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
+    SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
+      VERIFY_URL: 'https://centerstaged.io/api/jeopardyish.php'
     };
 
-    async function startApp() {
-      const success = await loadQuestions();
-      if (success) {
-        showGame();
-        initGame();
+    let currentLicense = null;
+    let currentEmail = null;
+    let csvData = [];
+
+    window.onload = function() {
+      const saved = sessionStorage.getItem('jeopardy_license');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          currentLicense = data.license;
+          currentEmail = data.email;
+          showDashboard();
+        } catch (e) {
+          sessionStorage.removeItem('jeopardy_license');
+        }
+      }
+    };
+
+    async function verifyLicense() {
+      const licenseKey = document.getElementById('license-input').value.trim();
+      const btn = document.getElementById('verify-btn');
+      const error = document.getElementById('login-error');
+      if (!licenseKey) { error.textContent = 'Please enter a license key'; error.classList.remove('hidden'); return; }
+      btn.textContent = 'Verifying...'; btn.disabled = true; error.classList.add('hidden');
+      try {
+        const response = await fetch(CONFIG.VERIFY_URL, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ license_key: licenseKey })
+        });
+        const data = await response.json();
+        if (data.success) {
+          currentLicense = licenseKey; currentEmail = data.purchase.email;
+          await saveLicense(licenseKey, currentEmail);
+          sessionStorage.setItem('jeopardy_license', JSON.stringify({ license: licenseKey, email: currentEmail }));
+          showDashboard();
+        } else {
+          error.textContent = 'Invalid license key. Please check and try again.'; error.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error(err); error.textContent = 'Error verifying license. Please try again.'; error.classList.remove('hidden');
+      }
+      btn.textContent = 'Verify License'; btn.disabled = false;
+    }
+
+    async function saveLicense(licenseKey, email) {
+      try {
+        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_licenses`, {
+          method: 'POST',
+          headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify({ license_key: licenseKey, email: email })
+        });
+      } catch (err) { console.error('Error saving license:', err); }
+    }
+
+    function showDashboard() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('dashboard-screen').classList.remove('hidden');
+      document.getElementById('user-email').textContent = currentEmail;
+      loadQuestions();
+    }
+
+    function logout() {
+      sessionStorage.removeItem('jeopardy_license');
+      currentLicense = null; currentEmail = null;
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('dashboard-screen').classList.add('hidden');
+      document.getElementById('license-input').value = '';
+    }
+
+    function showTab(tab) {
+      ['questions','add','upload','play'].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).classList.remove('bg-blue-600','text-white');
+        document.getElementById(`tab-${t}`).classList.add('bg-gray-200','text-gray-700');
+      });
+      document.getElementById(`panel-${tab}`).classList.remove('hidden');
+      document.getElementById(`tab-${tab}`).classList.remove('bg-gray-200','text-gray-700');
+      document.getElementById(`tab-${tab}`).classList.add('bg-blue-600','text-white');
+    }
+
+    // ============================================================
+    // LOAD QUESTIONS - Properly separated by Round
+    // ============================================================
+    async function loadQuestions() {
+      const list = document.getElementById('questions-list');
+      list.innerHTML = '<p class="text-gray-500">Loading...</p>';
+
+      try {
+        const response = await fetch(
+          `${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(currentLicense)}&order=round,category,value`,
+          { headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}` } }
+        );
+        const questions = await response.json();
+
+        if (questions.length === 0) {
+          list.innerHTML = '<p class="text-gray-500">No questions yet. Add some or upload a CSV.</p>';
+          return;
+        }
+
+        list.innerHTML = '';
+
+        // Robust round parsing - handles strings, numbers, floats
+        const round1 = questions.filter(q => parseInt(q.round) === 1);
+        const round2 = questions.filter(q => parseInt(q.round) === 2);
+        const round3 = questions.filter(q => parseInt(q.round) === 3);
+
+        function renderRound(roundNum, roundQs) {
+          if (roundQs.length === 0) return;
+
+          const roundHeader = document.createElement('div');
+          roundHeader.className = 'round-header';
+          roundHeader.textContent = `Round ${roundNum} (${roundQs.length} questions)`;
+          list.appendChild(roundHeader);
+
+          // Group by category within this round only
+          const byCat = {};
+          roundQs.forEach(q => {
+            const cat = q.category || 'UNKNOWN';
+            if (!byCat[cat]) byCat[cat] = [];
+            byCat[cat].push(q);
+          });
+
+          Object.keys(byCat).sort().forEach(cat => {
+            const group = document.createElement('div');
+            group.className = 'category-group';
+
+            const headerRow = document.createElement('div');
+            headerRow.className = 'category-header-row';
+
+            const title = document.createElement('span');
+            title.className = 'category-title';
+            title.textContent = cat;
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'delete-cat-btn';
+            delBtn.textContent = 'Delete Category';
+            delBtn.onclick = () => deleteCategory(roundNum, cat);
+
+            headerRow.appendChild(title);
+            headerRow.appendChild(delBtn);
+            group.appendChild(headerRow);
+
+            byCat[cat].forEach(q => {
+              const row = document.createElement('div');
+              row.className = 'question-row';
+
+              const text = document.createElement('div');
+              text.className = 'question-text';
+
+              const val = document.createElement('span');
+              val.className = 'value-tag';
+              val.textContent = `$${q.value}: `;
+
+              const qText = document.createTextNode(
+                (q.question || '').substring(0, 80) + ((q.question || '').length > 80 ? '...' : '')
+              );
+
+              text.appendChild(val);
+              text.appendChild(qText);
+
+              const xBtn = document.createElement('button');
+              xBtn.className = 'delete-x';
+              xBtn.textContent = '×';
+              xBtn.title = 'Delete this question';
+              xBtn.onclick = () => deleteQuestion(q.id);
+
+              row.appendChild(text);
+              row.appendChild(xBtn);
+              group.appendChild(row);
+            });
+
+            list.appendChild(group);
+          });
+        }
+
+        renderRound(1, round1);
+        renderRound(2, round2);
+        renderRound(3, round3);
+
+      } catch (err) {
+        console.error(err);
+        list.innerHTML = '<p class="text-red-500">Error loading questions.</p>';
       }
     }
-    startApp();
+
+    async function addQuestion() {
+      const round = document.getElementById('add-round').value;
+      const value = document.getElementById('add-value').value;
+      const category = document.getElementById('add-category').value.trim().toUpperCase();
+      const question = document.getElementById('add-question').value.trim();
+      const answer = document.getElementById('add-answer').value.trim();
+      const msg = document.getElementById('add-message');
+      if (!category || !question || !answer) {
+        msg.textContent = 'Please fill in all fields'; msg.className = 'text-center text-red-500'; msg.classList.remove('hidden'); return;
+      }
+      try {
+        const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions`, {
+          method: 'POST',
+          headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ license_key: currentLicense, round: parseInt(round), category: category, question: question, answer: answer, value: parseInt(value) })
+        });
+        if (response.ok) {
+          msg.textContent = 'Question added!'; msg.className = 'text-center text-green-600'; msg.classList.remove('hidden');
+          document.getElementById('add-category').value = '';
+          document.getElementById('add-question').value = '';
+          document.getElementById('add-answer').value = '';
+          setTimeout(() => msg.classList.add('hidden'), 2000);
+        } else { throw new Error('Failed'); }
+      } catch (err) {
+        console.error(err); msg.textContent = 'Error adding question'; msg.className = 'text-center text-red-500'; msg.classList.remove('hidden');
+      }
+    }
+
+    async function deleteQuestion(id) {
+      if (!confirm('Delete this question?')) return;
+      try {
+        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?id=eq.${encodeURIComponent(id)}&license_key=eq.${encodeURIComponent(currentLicense)}`, {
+          method: 'DELETE', headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}` }
+        });
+        loadQuestions();
+      } catch (err) { console.error(err); alert('Error deleting question'); }
+    }
+
+    async function deleteCategory(roundNum, category) {
+      if (!confirm(`Delete ALL questions in "${category}" from Round ${roundNum}?\n\nThis will remove all questions in this category. This cannot be undone.`)) return;
+      try {
+        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(currentLicense)}&round=eq.${roundNum}&category=eq.${encodeURIComponent(category)}`, {
+          method: 'DELETE', headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}` }
+        });
+        loadQuestions();
+      } catch (err) { console.error(err); alert('Error deleting category'); }
+    }
+
+    async function clearAllQuestions() {
+      if (!confirm('DELETE ALL QUESTIONS?\n\nThis will remove every question for your license. This cannot be undone.')) return;
+      if (!confirm('Are you ABSOLUTELY SURE? All questions will be permanently deleted.')) return;
+      try {
+        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(currentLicense)}`, {
+          method: 'DELETE', headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}` }
+        });
+        loadQuestions();
+      } catch (err) { console.error(err); alert('Error clearing questions'); }
+    }
+
+    function downloadTemplate() {
+      const template = `round,category,value,question,answer
+1,SCIENCE,100,This planet is known as the Red Planet.,What is Mars?
+1,SCIENCE,200,This gas makes up most of Earth's atmosphere.,What is Nitrogen?
+1,SCIENCE,300,This scientist developed the theory of relativity.,Who is Einstein?
+1,SCIENCE,400,This is the hardest natural substance on Earth.,What is Diamond?
+1,SCIENCE,500,This organ produces insulin in the human body.,What is the Pancreas?
+1,HISTORY,100,This document was signed in 1776.,What is the Declaration of Independence?
+1,HISTORY,200,This war was fought from 1861-1865.,What is the Civil War?
+1,HISTORY,300,This ancient wonder was located in Egypt.,What are the Pyramids?
+1,HISTORY,400,This empire was ruled by Julius Caesar.,What is the Roman Empire?
+1,HISTORY,500,This ship sank in 1912 on its maiden voyage.,What is the Titanic?
+1,GEOGRAPHY,100,This is the largest ocean on Earth.,What is the Pacific Ocean?
+1,GEOGRAPHY,200,This is the longest river in the world.,What is the Nile River?
+1,GEOGRAPHY,300,This is the smallest country in the world.,What is Vatican City?
+1,GEOGRAPHY,400,This desert is the largest hot desert in the world.,What is the Sahara Desert?
+1,GEOGRAPHY,500,This mountain range separates Europe and Asia.,What are the Ural Mountains?
+1,LITERATURE,100,This author wrote "Romeo and Juliet".,Who is William Shakespeare?
+1,LITERATURE,200,This novel features a whale named Moby Dick.,What is Moby Dick?
+1,LITERATURE,300,This wizard attends Hogwarts School.,Who is Harry Potter?
+1,LITERATURE,400,This dystopian novel features Big Brother.,What is 1984?
+1,LITERATURE,500,This epic poem tells of a journey home to Ithaca.,What is The Odyssey?
+1,ARTS,100,This artist painted the Mona Lisa.,Who is Leonardo da Vinci?
+1,ARTS,200,This composer was deaf but still wrote symphonies.,Who is Ludwig van Beethoven?
+1,ARTS,300,This ballet features a swan princess.,What is Swan Lake?
+1,ARTS,400,This painting shows melting clocks.,What is The Persistence of Memory?
+1,ARTS,500,This architectural style features flying buttresses.,What is Gothic architecture?
+1,SPORTS,100,This sport uses a bat and a ball.,What is baseball?
+1,SPORTS,200,This event happens every four years with athletes from all nations.,What are the Olympic Games?
+1,SPORTS,300,This sport is played on ice with skates.,What is ice hockey?
+1,SPORTS,400,This tennis tournament is played on grass courts.,What is Wimbledon?
+1,SPORTS,500,This ancient Greek sport is the origin of the marathon.,What is the Battle of Marathon?
+3,FINAL,0,This is the only planet not named after a god.,What is Earth?`;
+      const blob = new Blob([template], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'jeopardy_template.csv'; a.click();
+    }
+
+    function handleCSV(event) {
+      const file = event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        csvData = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = parseCSVLine(lines[i]);
+          if (values.length >= 5) {
+            csvData.push({
+              round: parseInt(values[headers.indexOf('round')]) || 1,
+              category: (values[headers.indexOf('category')] || '').toUpperCase(),
+              value: parseInt(values[headers.indexOf('value')]) || 100,
+              question: values[headers.indexOf('question')] || '',
+              answer: values[headers.indexOf('answer')] || ''
+            });
+          }
+        }
+        const preview = document.getElementById('csv-preview');
+        const content = document.getElementById('csv-preview-content');
+        preview.classList.remove('hidden');
+        let html = `<p class="mb-2 font-medium">${csvData.length} questions found:</p>`;
+        csvData.slice(0, 5).forEach(q => { html += `<div class="border-b py-1">R${q.round} | ${q.category} | $${q.value} | ${q.question.substring(0,40)}...</div>`; });
+        if (csvData.length > 5) html += `<p class="text-gray-500 mt-2">...and ${csvData.length - 5} more</p>`;
+        content.innerHTML = html;
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCSVLine(line) {
+      const result = []; let current = ''; let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') { inQuotes = !inQuotes; }
+        else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+        else { current += char; }
+      }
+      result.push(current.trim()); return result;
+    }
+
+    async function uploadCSV() {
+      const msg = document.getElementById('upload-message');
+      if (csvData.length === 0) { msg.textContent = 'No questions to upload'; msg.className = 'text-center text-red-500'; msg.classList.remove('hidden'); return; }
+      msg.textContent = 'Uploading...'; msg.className = 'text-center text-blue-600'; msg.classList.remove('hidden');
+      try {
+        const questionsToUpload = csvData.map(q => ({
+          license_key: currentLicense, round: q.round, category: q.category,
+          value: q.value, question: q.question, answer: q.answer
+        }));
+        const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions`, {
+          method: 'POST',
+          headers: { 'apikey': CONFIG.SUPABASE_KEY, 'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(questionsToUpload)
+        });
+        if (response.ok) {
+          msg.textContent = `Successfully uploaded ${csvData.length} questions!`; msg.className = 'text-center text-green-600';
+          csvData = []; document.getElementById('csv-preview').classList.add('hidden'); document.getElementById('csv-file').value = '';
+        } else { throw new Error('Upload failed'); }
+      } catch (err) { console.error(err); msg.textContent = 'Error uploading questions'; msg.className = 'text-center text-red-500'; }
+    }
+
+    function launchGame() {
+      sessionStorage.setItem('jeopardy_game_license', currentLicense);
+      window.open('jeopardyish.html', '_blank');
+    }
   </script>
+
 </body>
 </html>
