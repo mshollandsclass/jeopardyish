@@ -7,8 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
   <script>
-  const SUPABASE_URL = 'https://zzojvscgtuezmfnrvdhd.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F';
+  // All data comes from the server. No database keys in this file.
+  const API_URL = 'https://centerstaged.io/api/jeopardyish.php';
   </script>
   <style>
     body { box-sizing: border-box; }
@@ -89,7 +89,6 @@
       transform: translateY(-2px);
     }
   </style>
-<base target="_blank">
 </head>
 <body class="h-full bg-slate-900 overflow-auto">
   <div id="loading-screen" class="h-full flex items-center justify-center">
@@ -247,10 +246,8 @@
     let categoryNames = { round1: [], round2: [] };
 
     function getLicenseKey() {
-      const fromStorage = sessionStorage.getItem('jeopardy_game_license');
-      if (fromStorage) return fromStorage;
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('license');
+      // Only accept the key handed over by the dashboard.
+      return sessionStorage.getItem('jeopardy_game_license');
     }
 
     async function loadQuestions() {
@@ -260,14 +257,20 @@
         return false;
       }
       try {
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(licenseKey)}&order=round,category,value`,
-          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-        );
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'list', license_key: licenseKey })
+        });
         if (!response.ok) {
-          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+          throw new Error(`Server returned ${response.status}`);
         }
-        const questions = await response.json();
+        const result = await response.json();
+        if (!result.success) {
+          showError(result.error || 'Could not load your game. Please launch it from your dashboard.');
+          return false;
+        }
+        const questions = result.questions;
         if (!questions || questions.length === 0) {
           showError('No questions found for this license. Please add questions in your dashboard first.');
           return false;
