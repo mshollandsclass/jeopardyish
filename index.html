@@ -9,7 +9,6 @@
   <style>
     body { font-family: 'Inter', sans-serif; }
   </style>
-<base target="_blank">
 </head>
 <body class="bg-gray-100 min-h-screen">
 
@@ -160,33 +159,42 @@
   </div>
 
   <script>
-    // Configuration - REPLACE THESE WITH YOUR REAL VALUES
-    const CONFIG = {
-      SUPABASE_URL: 'https://zzojvscgtuezmfnrvdhd.supabase.co',
-      SUPABASE_KEY: 'sb_publishable_uOpdKerQNc2sr1QeE9hhiw_L6b6u26F',
-      VERIFY_URL: 'https://centerstaged.io/api/jeopardyish.php'
-    };
+    // All database access goes through the server. No keys live in this file.
+    const API_URL = 'https://centerstaged.io/api/jeopardyish.php';
 
     let currentLicense = null;
     let currentEmail = null;
     let csvData = [];
 
-    // Check for saved session - uses sessionStorage (not localStorage) for security
-    window.onload = function() {
+    async function api(action, extra = {}) {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, license_key: currentLicense, ...extra })
+      });
+      return res.json();
+    }
+
+    // On load, re-check the saved key with the server before showing anything.
+    window.onload = async function () {
       const saved = sessionStorage.getItem('jeopardy_license');
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          currentLicense = data.license;
+      if (!saved) return;
+      try {
+        currentLicense = JSON.parse(saved).license;
+        const data = await api('verify');
+        if (data.success) {
           currentEmail = data.email;
           showDashboard();
-        } catch (e) {
+        } else {
+          currentLicense = null;
           sessionStorage.removeItem('jeopardy_license');
         }
+      } catch (e) {
+        currentLicense = null;
+        sessionStorage.removeItem('jeopardy_license');
       }
     };
 
-    // Verify license with Gumroad via PHP proxy
     async function verifyLicense() {
       const licenseKey = document.getElementById('license-input').value.trim();
       const btn = document.getElementById('verify-btn');
@@ -203,36 +211,20 @@
       error.classList.add('hidden');
 
       try {
-        const response = await fetch(CONFIG.VERIFY_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ license_key: licenseKey })
-        });
-
-        const data = await response.json();
+        currentLicense = licenseKey;
+        const data = await api('verify');
 
         if (data.success) {
-          currentLicense = licenseKey;
-          currentEmail = data.purchase.email;
-
-          // Save to Supabase
-          await saveLicense(licenseKey, currentEmail);
-
-          // Save to sessionStorage (NOT localStorage) - key disappears when browser closes
-          sessionStorage.setItem('jeopardy_license', JSON.stringify({
-            license: licenseKey,
-            email: currentEmail
-          }));
-
+          currentEmail = data.email;
+          sessionStorage.setItem('jeopardy_license', JSON.stringify({ license: licenseKey }));
           showDashboard();
         } else {
-          error.textContent = 'Invalid license key. Please check and try again.';
+          currentLicense = null;
+          error.textContent = data.error || 'Invalid license key. Please check and try again.';
           error.classList.remove('hidden');
         }
       } catch (err) {
-        console.error(err);
+        currentLicense = null;
         error.textContent = 'Error verifying license. Please try again.';
         error.classList.remove('hidden');
       }
@@ -241,35 +233,16 @@
       btn.disabled = false;
     }
 
-    // Save license to Supabase
-    async function saveLicense(licenseKey, email) {
-      try {
-        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_licenses`, {
-          method: 'POST',
-          headers: {
-            'apikey': CONFIG.SUPABASE_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({ license_key: licenseKey, email: email })
-        });
-      } catch (err) {
-        console.error('Error saving license:', err);
-      }
-    }
-
-    // Show dashboard
     function showDashboard() {
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('dashboard-screen').classList.remove('hidden');
-      document.getElementById('user-email').textContent = currentEmail;
+      document.getElementById('user-email').textContent = currentEmail || '';
       loadQuestions();
     }
 
-    // Logout
     function logout() {
       sessionStorage.removeItem('jeopardy_license');
+      sessionStorage.removeItem('jeopardy_game_license');
       currentLicense = null;
       currentEmail = null;
       document.getElementById('login-screen').classList.remove('hidden');
@@ -277,7 +250,6 @@
       document.getElementById('license-input').value = '';
     }
 
-    // Tab switching
     function showTab(tab) {
       ['questions', 'add', 'upload', 'play'].forEach(t => {
         document.getElementById(`panel-${t}`).classList.add('hidden');
@@ -289,29 +261,20 @@
       document.getElementById(`tab-${tab}`).classList.add('bg-blue-600', 'text-white');
     }
 
-    // Load questions from Supabase
     async function loadQuestions() {
       const list = document.getElementById('questions-list');
-      list.innerHTML = '<p class="text-gray-500">Loading...</p>';
+      list.textContent = 'Loading...';
 
       try {
-        const response = await fetch(
-          `${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?license_key=eq.${encodeURIComponent(currentLicense)}&order=round,category,value`,
-          {
-            headers: {
-              'apikey': CONFIG.SUPABASE_KEY,
-              'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`
-            }
-          }
-        );
-        const questions = await response.json();
+        const data = await api('list');
+        if (!data.success) throw new Error(data.error || 'failed');
+        const questions = data.questions || [];
 
         if (questions.length === 0) {
-          list.innerHTML = '<p class="text-gray-500">No questions yet. Add some or upload a CSV.</p>';
+          list.textContent = 'No questions yet. Add some or upload a CSV.';
           return;
         }
 
-        // Group by round and category
         const grouped = {};
         questions.forEach(q => {
           const key = `Round ${q.round} - ${q.category}`;
@@ -319,8 +282,7 @@
           grouped[key].push(q);
         });
 
-        // SECURITY FIX: Use safe DOM creation instead of innerHTML
-        list.innerHTML = '';
+        list.textContent = '';
         Object.keys(grouped).sort().forEach(key => {
           const groupDiv = document.createElement('div');
           groupDiv.className = 'border rounded-lg p-3 mb-2';
@@ -353,7 +315,7 @@
 
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'text-red-500 hover:text-red-700 ml-2';
-            deleteBtn.textContent = '×';
+            deleteBtn.textContent = '\u00d7';
             deleteBtn.onclick = () => deleteQuestion(q.id);
 
             itemDiv.appendChild(textDiv);
@@ -365,12 +327,10 @@
           list.appendChild(groupDiv);
         });
       } catch (err) {
-        console.error(err);
-        list.innerHTML = '<p class="text-red-500">Error loading questions.</p>';
+        list.textContent = 'Error loading questions.';
       }
     }
 
-    // Add a single question
     async function addQuestion() {
       const round = document.getElementById('add-round').value;
       const value = document.getElementById('add-value').value;
@@ -387,62 +347,41 @@
       }
 
       try {
-        const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions`, {
-          method: 'POST',
-          headers: {
-            'apikey': CONFIG.SUPABASE_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            license_key: currentLicense,
+        const data = await api('add', {
+          questions: [{
             round: parseInt(round),
             category: category,
             question: question,
             answer: answer,
             value: parseInt(value)
-          })
+          }]
         });
 
-        if (response.ok) {
+        if (data.success) {
           msg.textContent = 'Question added!';
           msg.className = 'text-center text-green-600';
           msg.classList.remove('hidden');
-
           document.getElementById('add-category').value = '';
           document.getElementById('add-question').value = '';
           document.getElementById('add-answer').value = '';
-
           setTimeout(() => msg.classList.add('hidden'), 2000);
         } else {
-          throw new Error('Failed to add');
+          throw new Error(data.error || 'failed');
         }
       } catch (err) {
-        console.error(err);
         msg.textContent = 'Error adding question';
         msg.className = 'text-center text-red-500';
         msg.classList.remove('hidden');
       }
     }
 
-    // Delete a question - SECURITY FIX: includes license_key filter
     async function deleteQuestion(id) {
       if (!confirm('Delete this question?')) return;
-
       try {
-        await fetch(
-          `${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions?id=eq.${encodeURIComponent(id)}&license_key=eq.${encodeURIComponent(currentLicense)}`,
-          {
-            method: 'DELETE',
-            headers: {
-              'apikey': CONFIG.SUPABASE_KEY,
-              'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`
-            }
-          }
-        );
+        const data = await api('delete', { id: id });
+        if (!data.success) throw new Error(data.error || 'failed');
         loadQuestions();
       } catch (err) {
-        console.error(err);
         alert('Error deleting question');
       }
     }
@@ -490,15 +429,19 @@
       a.click();
     }
 
-    // Handle CSV file selection
     function handleCSV(event) {
       const file = event.target.files[0];
       if (!file) return;
 
+      if (file.size > 2 * 1024 * 1024) {
+        alert('That file is too large. Please keep CSV files under 2MB.');
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         const text = e.target.result;
-        const lines = text.trim().split('\n');
+        const lines = text.trim().split(/\r?\n/);
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
         csvData = [];
@@ -515,24 +458,37 @@
           }
         }
 
-        // Show preview
         const preview = document.getElementById('csv-preview');
         const content = document.getElementById('csv-preview-content');
         preview.classList.remove('hidden');
 
-        let html = `<p class="mb-2 font-medium">${csvData.length} questions found:</p>`;
+        // Built with textContent so nothing inside a CSV can run as code.
+        content.textContent = '';
+
+        const count = document.createElement('p');
+        count.className = 'mb-2 font-medium';
+        count.textContent = `${csvData.length} questions found:`;
+        content.appendChild(count);
+
         csvData.slice(0, 5).forEach(q => {
-          html += `<div class="border-b py-1">R${q.round} | ${q.category} | $${q.value} | ${q.question.substring(0, 40)}...</div>`;
+          const row = document.createElement('div');
+          row.className = 'border-b py-1';
+          row.textContent =
+            `R${q.round} | ${q.category} | $${q.value} | ` +
+            q.question.substring(0, 40) + '...';
+          content.appendChild(row);
         });
+
         if (csvData.length > 5) {
-          html += `<p class="text-gray-500 mt-2">...and ${csvData.length - 5} more</p>`;
+          const more = document.createElement('p');
+          more.className = 'text-gray-500 mt-2';
+          more.textContent = `...and ${csvData.length - 5} more`;
+          content.appendChild(more);
         }
-        content.innerHTML = html;
       };
       reader.readAsText(file);
     }
 
-    // Parse CSV line (handles quotes)
     function parseCSVLine(line) {
       const result = [];
       let current = '';
@@ -541,7 +497,8 @@
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
         if (char === '"') {
-          inQuotes = !inQuotes;
+          if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+          else { inQuotes = !inQuotes; }
         } else if (char === ',' && !inQuotes) {
           result.push(current.trim());
           current = '';
@@ -553,7 +510,6 @@
       return result;
     }
 
-    // Upload CSV questions to Supabase
     async function uploadCSV() {
       const msg = document.getElementById('upload-message');
 
@@ -569,42 +525,27 @@
       msg.classList.remove('hidden');
 
       try {
-        const questionsToUpload = csvData.map(q => ({
-          license_key: currentLicense,
-          round: q.round,
-          category: q.category,
-          value: q.value,
-          question: q.question,
-          answer: q.answer
-        }));
-
-        const response = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/jeopardy_questions`, {
-          method: 'POST',
-          headers: {
-            'apikey': CONFIG.SUPABASE_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(questionsToUpload)
-        });
-
-        if (response.ok) {
-          msg.textContent = `Successfully uploaded ${csvData.length} questions!`;
-          msg.className = 'text-center text-green-600';
-          csvData = [];
-          document.getElementById('csv-preview').classList.add('hidden');
-          document.getElementById('csv-file').value = '';
-        } else {
-          throw new Error('Upload failed');
+        // Send in batches so large files don't get rejected.
+        let uploaded = 0;
+        for (let i = 0; i < csvData.length; i += 100) {
+          const batch = csvData.slice(i, i + 100);
+          const data = await api('add', { questions: batch });
+          if (!data.success) throw new Error(data.error || 'failed');
+          uploaded += data.added || batch.length;
         }
+
+        msg.textContent = `Successfully uploaded ${uploaded} questions!`;
+        msg.className = 'text-center text-green-600';
+        csvData = [];
+        document.getElementById('csv-preview').classList.add('hidden');
+        document.getElementById('csv-file').value = '';
+        loadQuestions();
       } catch (err) {
-        console.error(err);
         msg.textContent = 'Error uploading questions';
         msg.className = 'text-center text-red-500';
       }
     }
 
-    // Launch game - SECURITY FIX: passes license via sessionStorage instead of URL
     function launchGame() {
       sessionStorage.setItem('jeopardy_game_license', currentLicense);
       window.open('jeopardyish.html', '_blank');
