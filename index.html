@@ -145,6 +145,121 @@
               ↓ Download CSV Template
             </button>
           </div>
+
+          <!-- AI prompt helper -->
+          <details class="border border-blue-200 bg-blue-50 rounded-lg">
+            <summary class="cursor-pointer px-4 py-3 font-medium text-blue-900 select-none">
+              Build your board from lessons you already taught
+            </summary>
+            <div class="px-4 pb-4 space-y-3 text-sm text-gray-700">
+              <p>
+                Attach two things to Claude, ChatGPT, or Gemini: the CSV template above,
+                and your lesson materials. Worksheets, guided notes, slide decks, the reading
+                students did, your study guide, unit plan, vocabulary list, past quizzes, lab
+                handouts, or your standards document all work. Attach several &mdash; the more
+                the assistant sees, the closer the questions land to what your students did.
+              </p>
+              <p>Then paste this prompt and fill in the bracketed parts:</p>
+
+              <div class="relative">
+                <button onclick="copyPrompt()" id="copy-prompt-btn"
+                  class="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded">
+                  Copy Prompt
+                </button>
+                <pre id="ai-prompt" class="bg-white border rounded-lg p-4 pt-12 overflow-auto max-h-80 text-xs whitespace-pre-wrap font-mono text-gray-800">I've attached my Jeopardyish template and my lesson materials. Write review
+questions drawn from my materials and give the filled template back to me as a
+CSV file I can download.
+
+MY CLASS
+Subject: [your subject]
+Grade level: [your grade]
+Unit or topic: [your unit]
+
+WHAT I'VE ATTACHED
+[List what you attached, for example: three worksheets, my slide deck, and the
+study guide. Delete the ones that don't apply.]
+
+WHAT STUDENTS NEED TO KNOW BY THE END
+[Paste your learning objectives, essential questions, or standards here. If you
+don't have them written out, list the 5 to 10 things students must walk away
+knowing.]
+
+WHAT I ALREADY ASSESSED OR SKIPPED
+[Optional. Note anything to leave out — a lesson you cut, a section you'll test
+separately, or a topic students already mastered. Write "nothing" if this
+doesn't apply.]
+
+BUILD THE QUESTIONS FROM MY MATERIALS
+- Pull every question from what I attached. Do not add outside content, and do
+  not test anything my materials never covered.
+- Use my exact vocabulary and terminology. If my worksheet says "producer," do
+  not write "autotroph."
+- Weight the board toward what my materials spend the most time on. If three
+  worksheets cover photosynthesis and one covers soil, photosynthesis gets more
+  questions.
+- Build categories around the actual sections, worksheets, or lessons in my
+  materials rather than generic topic names.
+- If my materials don't contain enough content to fill all 61 questions, tell
+  me which categories came up short before you write anything.
+
+WHAT TO CHANGE IN THE TEMPLATE
+- Replace every "Category 1" through "Category 6" with a real category name
+- Replace every "Question 1" through "Question 5" with a real question
+- Replace every "Answer 1" through "Answer 5" with the matching answer
+- Replace "Final Jeopardish Question", "Final Question", and "Final Answer"
+  with a real Final Round category, question, and answer
+
+WHAT TO LEAVE ALONE
+- Keep the header line exactly as it is: round,category,value,question,answer
+- Do not change any number in the round column
+- Do not change any number in the value column
+- Do not add rows, remove rows, or reorder rows
+- Keep all 62 lines, including the header
+
+HOW TO WRITE THE QUESTIONS
+- Category names: 30 characters maximum, 22 or fewer is better
+- Round 1 and Round 2 need different categories from each other
+- Write the question column as a statement, the way a game show clue reads
+  Example: This organelle converts sunlight into sugar.
+- Write the answer column as a question
+  Example: What is a chloroplast?
+- Difficulty rises with the value: in each category the lowest value is recall
+  straight from my materials, and the highest value asks students to apply or
+  connect ideas
+- Round 2 should be harder than Round 1 throughout
+- Make the Final Round question the hardest one — it should require connecting
+  two or more ideas from across the unit
+- Keep questions under 200 characters so they read clearly on a projector
+- Write at a reading level appropriate for [your grade]
+- Never repeat a question or reuse an answer
+- Wrap any question or answer containing a comma in double quotes
+
+BEFORE YOU GIVE ME THE FILE
+Confirm the file still has 62 lines, the round and value columns are untouched,
+and no placeholder text is left anywhere. Then list any question you were not
+able to source directly from my materials.</pre>
+              </div>
+
+              <p class="text-orange-700">
+                <strong>Read every question against your materials before you upload.</strong>
+                AI assistants write fluent clues and still get facts wrong. Treat the result as
+                a first draft, not a finished board.
+              </p>
+
+              <div>
+                <p class="font-medium text-gray-800 mb-1">If something looks off:</p>
+                <ul class="list-disc list-inside space-y-1">
+                  <li><strong>Questions don't match what you taught</strong> &mdash; tell it to rewrite using only the attached materials, and to name the worksheet each question came from.</li>
+                  <li><strong>Wrong terminology</strong> &mdash; tell it to use your materials' exact vocabulary and give two or three examples it got wrong.</li>
+                  <li><strong>Fewer than 60 questions in the preview</strong> &mdash; ask it to return all 62 lines.</li>
+                  <li><strong>Placeholder text on the board</strong> &mdash; ask it to replace every remaining "Question" and "Answer" placeholder.</li>
+                  <li><strong>Round 2 cards look empty</strong> &mdash; it changed the value column. Ask it to restore 200, 400, 600, 800, 1000 for Round 2.</li>
+                  <li><strong>Categories cut off</strong> &mdash; a name ran past 30 characters. Ask for shorter names.</li>
+                  <li><strong>You got text instead of a file</strong> &mdash; ask it to save the result as a downloadable CSV.</li>
+                </ul>
+              </div>
+            </div>
+          </details>
           <div id="csv-preview" class="hidden">
             <h3 class="font-medium mb-2">Preview:</h3>
             <div id="csv-preview-content" class="bg-gray-50 rounded p-4 overflow-auto max-h-64 text-sm"></div>
@@ -457,6 +572,36 @@
       } catch (err) {
         alert('Error deleting question');
       }
+    }
+
+    function copyPrompt() {
+      const text = document.getElementById('ai-prompt').textContent;
+      const btn = document.getElementById('copy-prompt-btn');
+
+      const done = () => {
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy Prompt'; }, 2000);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+      } else {
+        fallbackCopy(text, done);
+      }
+    }
+
+    // Older browsers and some school-managed devices block the clipboard API.
+    function fallbackCopy(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {
+        document.getElementById('copy-prompt-btn').textContent = 'Select and copy';
+      }
+      document.body.removeChild(ta);
     }
 
     // Download CSV template - 6 categories per round + Final Round
