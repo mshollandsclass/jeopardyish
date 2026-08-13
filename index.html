@@ -60,108 +60,67 @@
     <main class="max-w-6xl mx-auto px-4 py-8">
       <!-- Tabs -->
       <div class="flex gap-4 mb-6">
-        <button onclick="showTab('questions')" id="tab-questions" class="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white">My Questions</button>
+        <button onclick="showTab('directions')" id="tab-directions" class="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white">Directions</button>
+        <button onclick="showTab('questions')" id="tab-questions" class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">My Questions</button>
         <button onclick="showTab('add')" id="tab-add" class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Add Questions</button>
         <button onclick="showTab('upload')" id="tab-upload" class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Upload CSV</button>
         <button onclick="showTab('play')" id="tab-play" class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">Play Game</button>
       </div>
 
-      <!-- My Questions Tab -->
-      <div id="panel-questions" class="bg-white rounded-xl shadow p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-semibold">Your Questions</h2>
-          <div class="flex items-center gap-4">
-            <button onclick="loadQuestions()" class="text-sm text-blue-600 hover:underline">Refresh</button>
-            <button onclick="deleteAllQuestions()" class="text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-lg">Delete All Questions</button>
-          </div>
-        </div>
-        <div id="questions-list" class="space-y-2">
-          <p class="text-gray-500">Loading questions...</p>
-        </div>
-      </div>
+      <!-- Directions Tab -->
+      <div id="panel-directions" class="bg-white rounded-xl shadow p-6">
+        <h2 class="text-lg font-semibold mb-1">Directions</h2>
+        <p class="text-gray-600 mb-6">Everything you need to build a board and run a game.</p>
 
-      <!-- Add Questions Tab -->
-      <div id="panel-add" class="bg-white rounded-xl shadow p-6 hidden">
-        <h2 class="text-lg font-semibold mb-4">Add a Question</h2>
-        <div class="grid gap-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Round</label>
-              <select id="add-round" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                <option value="1">Round 1 (100-500)</option>
-                <option value="2">Round 2 (200-1000)</option>
-                <option value="3">Final Round</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Point Value</label>
-              <select id="add-value" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                <option value="100">100</option>
-                <option value="200">200</option>
-                <option value="300">300</option>
-                <option value="400">400</option>
-                <option value="500">500</option>
-                <option value="600">600</option>
-                <option value="800">800</option>
-                <option value="1000">1000</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Category <span class="font-normal text-gray-500">(max 30 characters &mdash; 22 or fewer looks best)</span>
-            </label>
-            <input type="text" id="add-category" maxlength="30" oninput="updateCatCount()" placeholder="e.g. SCIENCE" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-            <p id="cat-count" class="text-xs text-gray-500 mt-1">0 / 30</p>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Question</label>
-            <textarea id="add-question" rows="2" placeholder="Enter your question..." class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Answer</label>
-            <input type="text" id="add-answer" placeholder="What is...?" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-          </div>
-          <button onclick="addQuestion()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors">
-            Add Question
-          </button>
-          <p id="add-message" class="text-center hidden"></p>
-        </div>
-      </div>
+        <div class="space-y-8 text-sm text-gray-700">
 
-      <!-- Upload CSV Tab -->
-      <div id="panel-upload" class="bg-white rounded-xl shadow p-6 hidden">
-        <h2 class="text-lg font-semibold mb-4">Upload Questions from CSV</h2>
-        <div class="space-y-4">
-          <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSV(event)">
-            <button onclick="document.getElementById('csv-file').click()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">
-              Choose CSV File
-            </button>
-            <p class="text-gray-500 mt-2">or drag and drop</p>
-          </div>
-          <div>
-            <button onclick="downloadTemplate()" class="text-blue-600 hover:underline text-sm">
-              ↓ Download CSV Template
-            </button>
-          </div>
+          <section>
+            <h3 class="text-base font-semibold text-gray-900 mb-2">How a board is built</h3>
+            <p class="mb-2">
+              Each round holds 6 categories with 5 questions each &mdash; 30 questions per round.
+              Round 1 runs $100 to $500 and Round 2 runs $200 to $1000, with difficulty rising as
+              the value goes up. The Final Round holds one question.
+            </p>
+            <p>
+              Write the question as a statement and the answer as a question, the way the show does it:
+              &ldquo;This organelle converts sunlight into sugar&rdquo; &rarr; &ldquo;What is a chloroplast?&rdquo;
+              Keep category names to 30 characters so they fit the board.
+            </p>
+          </section>
 
-          <!-- AI prompt helper -->
-          <details class="border border-blue-200 bg-blue-50 rounded-lg">
-            <summary class="cursor-pointer px-4 py-3 font-medium text-blue-900 select-none">
-              Build your board from lessons you already taught
-            </summary>
-            <div class="px-4 pb-4 space-y-3 text-sm text-gray-700">
-              <p>
-                Attach two things to Claude, ChatGPT, or Gemini: the CSV template above,
-                and your lesson materials. Worksheets, guided notes, slide decks, the reading
-                students did, your study guide, unit plan, vocabulary list, past quizzes, lab
-                handouts, or your standards document all work. Attach several &mdash; the more
-                the assistant sees, the closer the questions land to what your students did.
-              </p>
-              <p>Then paste this prompt and fill in the bracketed parts:</p>
+          <section>
+            <h3 class="text-base font-semibold text-gray-900 mb-2">Three ways to add questions</h3>
+            <ul class="list-disc list-inside space-y-2">
+              <li>
+                <strong>Type them in</strong> &mdash; open <strong>Add Questions</strong>, pick a round,
+                category, and value, then write the pair. Reuse a category name to add another question to it.
+                Best for a warm-up or for filling a gap.
+              </li>
+              <li>
+                <strong>Fill in the template</strong> &mdash; open <strong>Upload CSV</strong>, click
+                <strong>Download CSV Template</strong>, and replace the placeholder text in Excel or
+                Google Sheets. Leave the round and value columns alone. Save as CSV and upload it.
+              </li>
+              <li>
+                <strong>Turn your lessons into a board</strong> &mdash; hand your worksheets, notes, or
+                slides to an AI assistant along with the prompt below, and get back a full board drawn
+                from what you actually taught.
+              </li>
+            </ul>
+          </section>
 
-              <div class="relative">
+          <section>
+            <h3 class="text-base font-semibold text-gray-900 mb-2">Build a board from your lessons</h3>
+            <p class="mb-2">
+              Attach two things to Claude, ChatGPT, or Gemini: the CSV template from the
+              <strong>Upload CSV</strong> tab, and your lesson materials. Worksheets, guided notes, slide
+              decks, the reading students did, your study guide, unit plan, vocabulary list, past quizzes,
+              lab handouts, or your standards document all work. Attach several &mdash; the more the
+              assistant sees, the closer the questions land to what your students did.
+            </p>
+            <p class="mb-3">Then paste this prompt and fill in the bracketed parts:</p>
+
+            <div class="relative">
                 <button onclick="copyPrompt()" id="copy-prompt-btn"
                   class="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded">
                   Copy Prompt
@@ -240,15 +199,14 @@ and no placeholder text is left anywhere. Then list any question you were not
 able to source directly from my materials.</pre>
               </div>
 
-              <p class="text-orange-700">
-                <strong>Read every question against your materials before you upload.</strong>
-                AI assistants write fluent clues and still get facts wrong. Treat the result as
-                a first draft, not a finished board.
-              </p>
+            <p class="mt-3 text-orange-700">
+              <strong>Read every question against your materials before you upload.</strong>
+              AI assistants write fluent clues and still get facts wrong. Treat the result as a first
+              draft, not a finished board.
+            </p>
 
-              <div>
-                <p class="font-medium text-gray-800 mb-1">If something looks off:</p>
-                <ul class="list-disc list-inside space-y-1">
+            <p class="font-medium text-gray-900 mt-4 mb-1">If the file comes back wrong:</p>
+            <ul class="list-disc list-inside space-y-1">
                   <li><strong>Questions don't match what you taught</strong> &mdash; tell it to rewrite using only the attached materials, and to name the worksheet each question came from.</li>
                   <li><strong>Wrong terminology</strong> &mdash; tell it to use your materials' exact vocabulary and give two or three examples it got wrong.</li>
                   <li><strong>Fewer than 60 questions in the preview</strong> &mdash; ask it to return all 62 lines.</li>
@@ -257,9 +215,121 @@ able to source directly from my materials.</pre>
                   <li><strong>Categories cut off</strong> &mdash; a name ran past 30 characters. Ask for shorter names.</li>
                   <li><strong>You got text instead of a file</strong> &mdash; ask it to save the result as a downloadable CSV.</li>
                 </ul>
-              </div>
+          </section>
+
+          <section>
+            <h3 class="text-base font-semibold text-gray-900 mb-2">Starting a new unit</h3>
+            <p>
+              Upload a new CSV with <strong>Replace my existing questions</strong> checked, and the old
+              board clears itself. Or open <strong>My Questions</strong> and click
+              <strong>Delete All Questions</strong>. Remove a single question any time with the &times;
+              beside it.
+            </p>
+          </section>
+
+          <section>
+            <h3 class="text-base font-semibold text-gray-900 mb-2">Running the game</h3>
+            <p class="mb-2">
+              Click <strong>Launch Game</strong> on the <strong>Play Game</strong> tab. It opens in a new
+              tab &mdash; project it and split the class into two teams.
+            </p>
+            <p class="mb-2">
+              A team picks a category and dollar value. Click that card to open the question, give them
+              time to answer, then click <strong>Reveal Answer</strong> and mark which team got it. A
+              correct answer adds the points, a wrong answer subtracts them, and
+              <strong>No One Answered</strong> leaves both scores alone. Used cards dim so you can see
+              what's left. Switch rounds any time with the buttons at the top.
+            </p>
+            <p>
+              For the Final Round, click <strong>Ready for Wagers</strong>. Each team wagers against their
+              own score before seeing the question, so a trailing team can still win. The answer stays
+              hidden until both wagers are in.
+            </p>
+          </section>
+
+        </div>
+      </div>
+
+      <!-- My Questions Tab -->
+      <div id="panel-questions" class="bg-white rounded-xl shadow p-6 hidden">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold">Your Questions</h2>
+          <div class="flex items-center gap-4">
+            <button onclick="loadQuestions()" class="text-sm text-blue-600 hover:underline">Refresh</button>
+            <button onclick="deleteAllQuestions()" class="text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-lg">Delete All Questions</button>
+          </div>
+        </div>
+        <div id="questions-list" class="space-y-2">
+          <p class="text-gray-500">Loading questions...</p>
+        </div>
+      </div>
+
+      <!-- Add Questions Tab -->
+      <div id="panel-add" class="bg-white rounded-xl shadow p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Add a Question</h2>
+        <div class="grid gap-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Round</label>
+              <select id="add-round" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="1">Round 1 (100-500)</option>
+                <option value="2">Round 2 (200-1000)</option>
+                <option value="3">Final Round</option>
+              </select>
             </div>
-          </details>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Point Value</label>
+              <select id="add-value" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="100">100</option>
+                <option value="200">200</option>
+                <option value="300">300</option>
+                <option value="400">400</option>
+                <option value="500">500</option>
+                <option value="600">600</option>
+                <option value="800">800</option>
+                <option value="1000">1000</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Category <span class="font-normal text-gray-500">(max 30 characters &mdash; 22 or fewer looks best)</span>
+            </label>
+            <input type="text" id="add-category" maxlength="30" oninput="updateCatCount()" placeholder="e.g. SCIENCE" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <p id="cat-count" class="text-xs text-gray-500 mt-1">0 / 30</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Question</label>
+            <textarea id="add-question" rows="2" placeholder="Enter your question..." class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Answer</label>
+            <input type="text" id="add-answer" placeholder="What is...?" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+          </div>
+          <button onclick="addQuestion()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors">
+            Add Question
+          </button>
+          <p id="add-message" class="text-center hidden"></p>
+        </div>
+      </div>
+
+      <!-- Upload CSV Tab -->
+      <div id="panel-upload" class="bg-white rounded-xl shadow p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Upload Questions from CSV</h2>
+        <div class="space-y-4">
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSV(event)">
+            <button onclick="document.getElementById('csv-file').click()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg">
+              Choose CSV File
+            </button>
+            <p class="text-gray-500 mt-2">or drag and drop</p>
+          </div>
+          <div>
+            <button onclick="downloadTemplate()" class="text-blue-600 hover:underline text-sm">
+              ↓ Download CSV Template
+            </button>
+          </div>
+
           <div id="csv-preview" class="hidden">
             <h3 class="font-medium mb-2">Preview:</h3>
             <div id="csv-preview-content" class="bg-gray-50 rounded p-4 overflow-auto max-h-64 text-sm"></div>
@@ -285,12 +355,11 @@ able to source directly from my materials.</pre>
 
       <!-- Play Game Tab -->
       <div id="panel-play" class="bg-white rounded-xl shadow p-6 hidden">
-        <h2 class="text-lg font-semibold mb-4">Play Your Game</h2>
-        <p class="text-gray-600 mb-4">Launch the Jeopardy game with your custom questions.</p>
+        <h2 class="text-lg font-semibold mb-2">Play Your Game</h2>
+        <p class="text-gray-600 mb-4">Opens in a new tab. Project it and split the class into two teams.</p>
         <button onclick="launchGame()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg">
           Launch Game
         </button>
-        <p class="text-sm text-gray-500 mt-4">Make sure you have at least 30 questions (6 categories × 5 questions) for Round 1.</p>
       </div>
     </main>
   </div>
@@ -410,7 +479,7 @@ able to source directly from my materials.</pre>
     }
 
     function showTab(tab) {
-      ['questions', 'add', 'upload', 'play'].forEach(t => {
+      ['directions', 'questions', 'add', 'upload', 'play'].forEach(t => {
         document.getElementById(`panel-${t}`).classList.add('hidden');
         document.getElementById(`tab-${t}`).classList.remove('bg-blue-600', 'text-white');
         document.getElementById(`tab-${t}`).classList.add('bg-gray-200', 'text-gray-700');
