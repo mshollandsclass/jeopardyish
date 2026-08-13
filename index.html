@@ -108,8 +108,11 @@
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-            <input type="text" id="add-category" placeholder="e.g. SCIENCE" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Category <span class="font-normal text-gray-500">(max 30 characters &mdash; 22 or fewer looks best)</span>
+            </label>
+            <input type="text" id="add-category" maxlength="30" oninput="updateCatCount()" placeholder="e.g. SCIENCE" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <p id="cat-count" class="text-xs text-gray-500 mt-1">0 / 30</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Question</label>
@@ -416,6 +419,20 @@
       }
     }
 
+    // Categories longer than this overflow the board header.
+    const MAX_CATEGORY_LENGTH = 30;
+    let trimmedCategories = 0;
+
+    function updateCatCount() {
+      const el = document.getElementById('add-category');
+      const out = document.getElementById('cat-count');
+      const n = el.value.length;
+      out.textContent = `${n} / ${MAX_CATEGORY_LENGTH}`;
+      out.className = n > 22
+        ? 'text-xs text-orange-600 mt-1'
+        : 'text-xs text-gray-500 mt-1';
+    }
+
     async function deleteAllQuestions() {
       if (!confirm('Delete ALL of your questions?\n\nThis cannot be undone. Your game board will be empty until you add or upload new questions.')) return;
       if (!confirm('Are you sure? This permanently removes every question in your account.')) return;
@@ -471,16 +488,22 @@
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
         csvData = [];
+        trimmedCategories = 0;
         for (let i = 1; i < lines.length; i++) {
           const values = parseCSVLine(lines[i]);
           if (values.length < 5) continue;
 
-          const category = (values[headers.indexOf('category')] || '').trim().toUpperCase();
+          let category = (values[headers.indexOf('category')] || '').trim().toUpperCase();
           const question = (values[headers.indexOf('question')] || '').trim();
           const answer = (values[headers.indexOf('answer')] || '').trim();
 
           // Skip blank spacer rows
           if (!category || !question || !answer) continue;
+
+          if (category.length > MAX_CATEGORY_LENGTH) {
+            category = category.substring(0, MAX_CATEGORY_LENGTH).trim();
+            trimmedCategories++;
+          }
 
           let round = parseInt(values[headers.indexOf('round')]);
           const value = parseInt(values[headers.indexOf('value')]);
@@ -518,6 +541,14 @@
         count.textContent =
           `${csvData.length} questions found — Round 1: ${r1}, Round 2: ${r2}, Final: ${r3}`;
         content.appendChild(count);
+
+        if (trimmedCategories > 0) {
+          const warn = document.createElement('p');
+          warn.className = 'mb-2 text-orange-600';
+          warn.textContent =
+            `Note: ${trimmedCategories} category name(s) shortened to ${MAX_CATEGORY_LENGTH} characters to fit the board.`;
+          content.appendChild(warn);
+        }
 
         if (droppedExtras > 0) {
           const warn = document.createElement('p');
