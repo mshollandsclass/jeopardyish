@@ -33,6 +33,10 @@
         >
           Verify License
         </button>
+        <label class="flex items-center justify-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input type="checkbox" id="remember-me" checked class="h-4 w-4">
+          Keep me signed in on this device
+        </label>
         <p id="login-error" class="text-red-500 text-center hidden"></p>
       </div>
       <div class="mt-6 text-center text-sm text-gray-500">
@@ -66,7 +70,10 @@
       <div id="panel-questions" class="bg-white rounded-xl shadow p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold">Your Questions</h2>
-          <button onclick="loadQuestions()" class="text-sm text-blue-600 hover:underline">Refresh</button>
+          <div class="flex items-center gap-4">
+            <button onclick="loadQuestions()" class="text-sm text-blue-600 hover:underline">Refresh</button>
+            <button onclick="deleteAllQuestions()" class="text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-lg">Delete All Questions</button>
+          </div>
         </div>
         <div id="questions-list" class="space-y-2">
           <p class="text-gray-500">Loading questions...</p>
@@ -138,6 +145,18 @@
           <div id="csv-preview" class="hidden">
             <h3 class="font-medium mb-2">Preview:</h3>
             <div id="csv-preview-content" class="bg-gray-50 rounded p-4 overflow-auto max-h-64 text-sm"></div>
+
+            <div class="mt-4 border rounded-lg p-4 bg-gray-50">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="csv-replace" checked class="mt-1 h-4 w-4">
+                <span class="text-sm text-gray-700">
+                  <strong>Replace my existing questions</strong><br>
+                  Clears your old questions first, so each new game starts fresh.
+                  Uncheck this to add to what you already have.
+                </span>
+              </label>
+            </div>
+
             <button onclick="uploadCSV()" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg">
               Upload All Questions
             </button>
@@ -175,23 +194,46 @@
       return res.json();
     }
 
+    // The saved key is only a convenience. The server re-checks it with
+    // Gumroad on every single request, so a saved key grants nothing on its own.
+    const STORE_KEY = 'jeopardy_license';
+
+    function saveLicenseLocally(licenseKey, remember) {
+      clearSavedLicense();
+      const target = remember ? localStorage : sessionStorage;
+      target.setItem(STORE_KEY, JSON.stringify({ license: licenseKey }));
+    }
+
+    function readSavedLicense() {
+      const raw = localStorage.getItem(STORE_KEY) || sessionStorage.getItem(STORE_KEY);
+      if (!raw) return null;
+      try { return JSON.parse(raw).license || null; } catch (e) { return null; }
+    }
+
+    function clearSavedLicense() {
+      localStorage.removeItem(STORE_KEY);
+      sessionStorage.removeItem(STORE_KEY);
+      localStorage.removeItem('jeopardy_game_license');
+      sessionStorage.removeItem('jeopardy_game_license');
+    }
+
     // On load, re-check the saved key with the server before showing anything.
     window.onload = async function () {
-      const saved = sessionStorage.getItem('jeopardy_license');
+      const saved = readSavedLicense();
       if (!saved) return;
       try {
-        currentLicense = JSON.parse(saved).license;
+        currentLicense = saved;
         const data = await api('verify');
         if (data.success) {
           currentEmail = data.email;
           showDashboard();
         } else {
           currentLicense = null;
-          sessionStorage.removeItem('jeopardy_license');
+          clearSavedLicense();
         }
       } catch (e) {
         currentLicense = null;
-        sessionStorage.removeItem('jeopardy_license');
+        clearSavedLicense();
       }
     };
 
@@ -216,7 +258,7 @@
 
         if (data.success) {
           currentEmail = data.email;
-          sessionStorage.setItem('jeopardy_license', JSON.stringify({ license: licenseKey }));
+          saveLicenseLocally(licenseKey, document.getElementById('remember-me').checked);
           showDashboard();
         } else {
           currentLicense = null;
@@ -241,8 +283,7 @@
     }
 
     function logout() {
-      sessionStorage.removeItem('jeopardy_license');
-      sessionStorage.removeItem('jeopardy_game_license');
+      clearSavedLicense();
       currentLicense = null;
       currentEmail = null;
       document.getElementById('login-screen').classList.remove('hidden');
@@ -375,6 +416,21 @@
       }
     }
 
+    async function deleteAllQuestions() {
+      if (!confirm('Delete ALL of your questions?\n\nThis cannot be undone. Your game board will be empty until you add or upload new questions.')) return;
+      if (!confirm('Are you sure? This permanently removes every question in your account.')) return;
+
+      const list = document.getElementById('questions-list');
+      list.textContent = 'Deleting...';
+      try {
+        const data = await api('delete_all');
+        if (!data.success) throw new Error(data.error || 'failed');
+        loadQuestions();
+      } catch (err) {
+        list.textContent = 'Error deleting questions.';
+      }
+    }
+
     async function deleteQuestion(id) {
       if (!confirm('Delete this question?')) return;
       try {
@@ -386,47 +442,17 @@
       }
     }
 
-    // Download CSV template - NOW WITH 6 CATEGORIES + FINAL JEOPARDY
+    // Download CSV template - 6 categories per round + Final Round
     function downloadTemplate() {
-      const template = `round,category,value,question,answer
-1,SCIENCE,100,This planet is known as the Red Planet.,What is Mars?
-1,SCIENCE,200,This gas makes up most of Earth's atmosphere.,What is Nitrogen?
-1,SCIENCE,300,This scientist developed the theory of relativity.,Who is Einstein?
-1,SCIENCE,400,This is the hardest natural substance on Earth.,What is Diamond?
-1,SCIENCE,500,This organ produces insulin in the human body.,What is the Pancreas?
-1,HISTORY,100,This document was signed in 1776.,What is the Declaration of Independence?
-1,HISTORY,200,This war was fought from 1861-1865.,What is the Civil War?
-1,HISTORY,300,This ancient wonder was located in Egypt.,What are the Pyramids?
-1,HISTORY,400,This empire was ruled by Julius Caesar.,What is the Roman Empire?
-1,HISTORY,500,This ship sank in 1912 on its maiden voyage.,What is the Titanic?
-1,GEOGRAPHY,100,This is the largest ocean on Earth.,What is the Pacific Ocean?
-1,GEOGRAPHY,200,This is the longest river in the world.,What is the Nile River?
-1,GEOGRAPHY,300,This is the smallest country in the world.,What is Vatican City?
-1,GEOGRAPHY,400,This desert is the largest hot desert in the world.,What is the Sahara Desert?
-1,GEOGRAPHY,500,This mountain range separates Europe and Asia.,What are the Ural Mountains?
-1,LITERATURE,100,This author wrote "Romeo and Juliet".,Who is William Shakespeare?
-1,LITERATURE,200,This novel features a whale named Moby Dick.,What is Moby Dick?
-1,LITERATURE,300,This wizard attends Hogwarts School.,Who is Harry Potter?
-1,LITERATURE,400,This dystopian novel features Big Brother.,What is 1984?
-1,LITERATURE,500,This epic poem tells of a journey home to Ithaca.,What is The Odyssey?
-1,ARTS,100,This artist painted the Mona Lisa.,Who is Leonardo da Vinci?
-1,ARTS,200,This composer was deaf but still wrote symphonies.,Who is Ludwig van Beethoven?
-1,ARTS,300,This ballet features a swan princess.,What is Swan Lake?
-1,ARTS,400,This painting shows melting clocks.,What is The Persistence of Memory?
-1,ARTS,500,This architectural style features flying buttresses.,What is Gothic architecture?
-1,SPORTS,100,This sport uses a bat and a ball.,What is baseball?
-1,SPORTS,200,This event happens every four years with athletes from all nations.,What are the Olympic Games?
-1,SPORTS,300,This sport is played on ice with skates.,What is ice hockey?
-1,SPORTS,400,This tennis tournament is played on grass courts.,What is Wimbledon?
-1,SPORTS,500,This ancient Greek sport is the origin of the marathon.,What is the Battle of Marathon?
-3,FINAL,0,This is the only planet not named after a god.,What is Earth?`;
+      const template = "round,category,value,question,answer\n1,Category 1,100,Question 1,Answer 1\n1,Category 1,200,Question 2,Answer 2\n1,Category 1,300,Question 3,Answer 3\n1,Category 1,400,Question 4,Answer 4\n1,Category 1,500,Question 5,Answer 5\n1,Category 2,100,Question 1,Answer 1\n1,Category 2,200,Question 2,Answer 2\n1,Category 2,300,Question 3,Answer 3\n1,Category 2,400,Question 4,Answer 4\n1,Category 2,500,Question 5,Answer 5\n1,Category 3,100,Question 1,Answer 1\n1,Category 3,200,Question 2,Answer 2\n1,Category 3,300,Question 3,Answer 3\n1,Category 3,400,Question 4,Answer 4\n1,Category 3,500,Question 5,Answer 5\n1,Category 4,100,Question 1,Answer 1\n1,Category 4,200,Question 2,Answer 2\n1,Category 4,300,Question 3,Answer 3\n1,Category 4,400,Question 4,Answer 4\n1,Category 4,500,Question 5,Answer 5\n1,Category 5,100,Question 1,Answer 1\n1,Category 5,200,Question 2,Answer 2\n1,Category 5,300,Question 3,Answer 3\n1,Category 5,400,Question 4,Answer 4\n1,Category 5,500,Question 5,Answer 5\n1,Category 6,100,Question 1,Answer 1\n1,Category 6,200,Question 2,Answer 2\n1,Category 6,300,Question 3,Answer 3\n1,Category 6,400,Question 4,Answer 4\n1,Category 6,500,Question 5,Answer 5\n2,Category 1,200,Question 1,Answer 1\n2,Category 1,400,Question 2,Answer 2\n2,Category 1,600,Question 3,Answer 3\n2,Category 1,800,Question 4,Answer 4\n2,Category 1,1000,Question 5,Answer 5\n2,Category 2,200,Question 1,Answer 1\n2,Category 2,400,Question 2,Answer 2\n2,Category 2,600,Question 3,Answer 3\n2,Category 2,800,Question 4,Answer 4\n2,Category 2,1000,Question 5,Answer 5\n2,Category 3,200,Question 1,Answer 1\n2,Category 3,400,Question 2,Answer 2\n2,Category 3,600,Question 3,Answer 3\n2,Category 3,800,Question 4,Answer 4\n2,Category 3,1000,Question 5,Answer 5\n2,Category 4,200,Question 1,Answer 1\n2,Category 4,400,Question 2,Answer 2\n2,Category 4,600,Question 3,Answer 3\n2,Category 4,800,Question 4,Answer 4\n2,Category 4,1000,Question 5,Answer 5\n2,Category 5,200,Question 1,Answer 1\n2,Category 5,400,Question 2,Answer 2\n2,Category 5,600,Question 3,Answer 3\n2,Category 5,800,Question 4,Answer 4\n2,Category 5,1000,Question 5,Answer 5\n2,Category 6,200,Question 1,Answer 1\n2,Category 6,400,Question 2,Answer 2\n2,Category 6,600,Question 3,Answer 3\n2,Category 6,800,Question 4,Answer 4\n2,Category 6,1000,Question 5,Answer 5\n3,Final Jeopardish Question,0,Final Question,Final Answer";
 
       const blob = new Blob([template], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'jeopardy_template.csv';
+      a.download = 'jeopardyish_template.csv';
       a.click();
+      URL.revokeObjectURL(url);
     }
 
     function handleCSV(event) {
@@ -447,16 +473,34 @@
         csvData = [];
         for (let i = 1; i < lines.length; i++) {
           const values = parseCSVLine(lines[i]);
-          if (values.length >= 5) {
-            csvData.push({
-              round: parseInt(values[headers.indexOf('round')]) || 1,
-              category: (values[headers.indexOf('category')] || '').toUpperCase(),
-              value: parseInt(values[headers.indexOf('value')]) || 100,
-              question: values[headers.indexOf('question')] || '',
-              answer: values[headers.indexOf('answer')] || ''
-            });
+          if (values.length < 5) continue;
+
+          const category = (values[headers.indexOf('category')] || '').trim().toUpperCase();
+          const question = (values[headers.indexOf('question')] || '').trim();
+          const answer = (values[headers.indexOf('answer')] || '').trim();
+
+          // Skip blank spacer rows
+          if (!category || !question || !answer) continue;
+
+          let round = parseInt(values[headers.indexOf('round')]);
+          const value = parseInt(values[headers.indexOf('value')]);
+
+          // A row whose category mentions "FINAL" is the Final Round,
+          // even if the round column was left blank.
+          if (!round) {
+            round = category.indexOf('FINAL') !== -1 ? 3 : 1;
           }
+
+          csvData.push({
+            round: round,
+            category: category,
+            value: isNaN(value) ? 0 : value,
+            question: question,
+            answer: answer
+          });
         }
+
+        normalizeValues(csvData);
 
         const preview = document.getElementById('csv-preview');
         const content = document.getElementById('csv-preview-content');
@@ -465,10 +509,23 @@
         // Built with textContent so nothing inside a CSV can run as code.
         content.textContent = '';
 
+        const r1 = csvData.filter(q => q.round === 1).length;
+        const r2 = csvData.filter(q => q.round === 2).length;
+        const r3 = csvData.filter(q => q.round === 3).length;
+
         const count = document.createElement('p');
         count.className = 'mb-2 font-medium';
-        count.textContent = `${csvData.length} questions found:`;
+        count.textContent =
+          `${csvData.length} questions found — Round 1: ${r1}, Round 2: ${r2}, Final: ${r3}`;
         content.appendChild(count);
+
+        if (droppedExtras > 0) {
+          const warn = document.createElement('p');
+          warn.className = 'mb-2 text-orange-600';
+          warn.textContent =
+            `Note: ${droppedExtras} extra question(s) skipped. Each category holds 5.`;
+          content.appendChild(warn);
+        }
 
         csvData.slice(0, 5).forEach(q => {
           const row = document.createElement('div');
@@ -487,6 +544,39 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    // The board expects fixed values: 100-500 in Round 1, 200-1000 in Round 2.
+    // Teachers' CSVs often use 100-500 for both, which leaves Round 2 blank.
+    // This sorts each category and assigns the values the board needs.
+    const ROUND1_VALUES = [100, 200, 300, 400, 500];
+    const ROUND2_VALUES = [200, 400, 600, 800, 1000];
+    let droppedExtras = 0;
+
+    function normalizeValues(rows) {
+      droppedExtras = 0;
+      const keep = [];
+      const groups = {};
+
+      rows.forEach(r => {
+        if (r.round === 3) { r.value = 0; keep.push(r); return; }
+        const key = r.round + '||' + r.category;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(r);
+      });
+
+      Object.keys(groups).forEach(key => {
+        const group = groups[key];
+        group.sort((a, b) => a.value - b.value);
+        const scale = group[0].round === 1 ? ROUND1_VALUES : ROUND2_VALUES;
+        group.forEach((r, i) => {
+          if (i < 5) { r.value = scale[i]; keep.push(r); }
+          else { droppedExtras++; }
+        });
+      });
+
+      rows.length = 0;
+      keep.forEach(r => rows.push(r));
     }
 
     function parseCSVLine(line) {
@@ -520,11 +610,26 @@
         return;
       }
 
-      msg.textContent = 'Uploading...';
+      const replaceExisting = document.getElementById('csv-replace').checked;
+
+      if (replaceExisting &&
+          !confirm('This will delete your existing questions and replace them with this file.\n\nContinue?')) {
+        msg.classList.add('hidden');
+        return;
+      }
+
+      msg.textContent = replaceExisting ? 'Clearing old questions...' : 'Uploading...';
       msg.className = 'text-center text-blue-600';
       msg.classList.remove('hidden');
 
       try {
+        if (replaceExisting) {
+          const cleared = await api('delete_all');
+          if (!cleared.success) throw new Error(cleared.error || 'failed');
+        }
+
+        msg.textContent = 'Uploading...';
+
         // Send in batches so large files don't get rejected.
         let uploaded = 0;
         for (let i = 0; i < csvData.length; i += 100) {
@@ -547,7 +652,11 @@
     }
 
     function launchGame() {
-      sessionStorage.setItem('jeopardy_game_license', currentLicense);
+      // Match wherever the login was saved, so the game survives a browser restart
+      // for teachers who chose to stay signed in.
+      const remembered = localStorage.getItem(STORE_KEY) !== null;
+      const target = remembered ? localStorage : sessionStorage;
+      target.setItem('jeopardy_game_license', currentLicense);
       window.open('jeopardyish.html', '_blank');
     }
   </script>
