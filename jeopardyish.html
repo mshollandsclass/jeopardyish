@@ -455,9 +455,13 @@
     const MAX_CATEGORIES = 6;
     const EXPECTED_ROWS = 5;
     // Round 1: $100-$500. Round 2: $200-$1000. Each row is a fixed value.
-    const EXPECTED_VALUES = currentRound === 1
-      ? [100, 200, 300, 400, 500]
-      : [200, 400, 600, 800, 1000];
+    // This must be a function: as a const it would freeze on Round 1's values
+    // and never update when the teacher switches rounds.
+    const ROUND1_VALUES = [100, 200, 300, 400, 500];
+    const ROUND2_VALUES = [200, 400, 600, 800, 1000];
+    function currentValues() {
+      return currentRound === 1 ? ROUND1_VALUES : ROUND2_VALUES;
+    }
 
     function renderBoard() {
       const board = document.getElementById('game-board');
@@ -521,7 +525,7 @@
             card.textContent = '';
           } else {
             const catQuestions = questions[cat] || [];
-            const expectedValue = EXPECTED_VALUES[row];
+            const expectedValue = currentValues()[row];
             // Look up question by matching the expected value (not by row index)
             const question = catQuestions.find(q => q.value === expectedValue);
             if (question) {
@@ -562,7 +566,7 @@
 
     // Legacy function for backward compatibility
     function openQuestion(category, row) {
-      const expectedValue = (currentRound === 1 ? [100,200,300,400,500] : [200,400,600,800,1000])[row];
+      const expectedValue = currentValues()[row];
       openQuestionByValue(category, expectedValue);
     }
 
@@ -602,7 +606,7 @@
       if (currentQuestion) {
         const catIndex = categories.indexOf(currentQuestion.category);
         // Find the row index based on the value
-        const expectedValues = currentRound === 1 ? [100,200,300,400,500] : [200,400,600,800,1000];
+        const expectedValues = currentValues();
         const rowIndex = expectedValues.indexOf(currentQuestion.value);
         const cardId = `col${catIndex}-row${rowIndex}`;
         const currentUsedCards = currentRound === 1 ? usedCards.round1 : usedCards.round2;
