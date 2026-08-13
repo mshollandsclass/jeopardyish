@@ -246,8 +246,9 @@
     let categoryNames = { round1: [], round2: [] };
 
     function getLicenseKey() {
-      // Only accept the key handed over by the dashboard.
-      return sessionStorage.getItem('jeopardy_game_license');
+      // Only accept a key handed over by the dashboard, never one from the URL.
+      return localStorage.getItem('jeopardy_game_license')
+          || sessionStorage.getItem('jeopardy_game_license');
     }
 
     async function loadQuestions() {
