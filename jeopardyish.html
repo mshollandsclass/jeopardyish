@@ -42,28 +42,30 @@
       background: linear-gradient(145deg, #1e3a8a, #1e40af);
       border: 3px solid #1e3a8a;
       box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
-      min-height: 110px;
+      min-height: 130px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0.5rem 0.35rem;
+      padding: 0.5rem 0.4rem;
     }
-    /* Category text scales with the screen and stays readable from the back
-       of a classroom. Long names shrink a little instead of overflowing. */
+    /* Category text stays large and wraps onto extra lines at full size.
+       It only steps down once a name is genuinely too long to fit.
+       Hyphenation is off so words never split mid-word. */
     .category-header .cat-text {
-      font-size: clamp(1.05rem, 1.9vw, 2rem);
-      line-height: 1.05;
+      font-size: clamp(1.5rem, 2.8vw, 2.5rem);
+      line-height: 0.95;
       letter-spacing: 0.5px;
       text-align: center;
       width: 100%;
+      hyphens: none;
+      -webkit-hyphens: none;
       overflow-wrap: break-word;
-      hyphens: auto;
     }
     .category-header .cat-text.long {
-      font-size: clamp(0.9rem, 1.5vw, 1.6rem);
+      font-size: clamp(1.25rem, 2.25vw, 2rem);
     }
     .category-header .cat-text.very-long {
-      font-size: clamp(0.8rem, 1.25vw, 1.35rem);
+      font-size: clamp(1.05rem, 1.85vw, 1.65rem);
     }
     .category-header.empty {
       background: linear-gradient(145deg, #1e293b, #0f172a);
@@ -518,12 +520,13 @@
           catDiv.className = 'category-header empty rounded-lg category-font text-white font-bold';
         }
 
-        // Longer names get a smaller step down so they still fit the box.
+        // Names wrap onto two or three lines at full size first. Only names
+        // too long for that step down a size.
         const label = paddedLabels[i];
         const span = document.createElement('span');
         span.className = 'cat-text';
-        if (label.length > 26) span.classList.add('very-long');
-        else if (label.length > 15) span.classList.add('long');
+        if (label.length > 30) span.classList.add('very-long');
+        else if (label.length > 22) span.classList.add('long');
         span.textContent = label;
 
         catDiv.appendChild(span);
